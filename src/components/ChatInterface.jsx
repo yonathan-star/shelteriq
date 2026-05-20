@@ -58,13 +58,15 @@ export function ChatInterface({ language, onResults }) {
           { role: "model", parts: [{ text: response.text }] }
         ]);
       }
-    } catch {
+    } catch (err) {
+      const isRateLimit = err?.message?.includes("429") || err?.status === 429;
       setMessages(prev => [
         ...prev,
         {
           role: "assistant",
-          content:
-            "Something went wrong. Please try again or call 954-563-4357."
+          content: isRateLimit
+            ? "I'm receiving too many requests right now. Please wait a moment and try again."
+            : "Something went wrong. Please try again or call 954-563-4357."
         }
       ]);
     }
