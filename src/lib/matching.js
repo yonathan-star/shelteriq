@@ -44,7 +44,8 @@ function buildReason(service, need, who) {
 }
 
 export function filterServices(need, who, area, userCoords) {
-  const base = services.filter(s => !s.type.includes("outreach"));
+  // Only exclude services that are purely outreach/mobile with no fixed location
+  const base = services.filter(s => s.coords !== null || s.type.some(t => t !== "outreach"));
 
   let filtered = base.filter(s => {
     if (need && need !== "other") {

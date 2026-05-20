@@ -1,5 +1,6 @@
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
 import { useState } from "react";
+import { t } from "../lib/i18n";
 
 const TYPE_COLORS = {
   shelter: "#1D4ED8",
@@ -10,8 +11,9 @@ const TYPE_COLORS = {
   default: "#374151"
 };
 
-export function MapView({ services, userCoords }) {
+export function MapView({ services, userCoords, language = "en" }) {
   const [selected, setSelected] = useState(null);
+  const L = t(language);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
@@ -20,12 +22,10 @@ export function MapView({ services, userCoords }) {
   const center = userCoords || { lat: 26.1224, lng: -80.1534 };
 
   if (!isLoaded) {
-    return (
-      <div className="map-loading">
-        Loading map...
-      </div>
-    );
+    return <div className="map-loading">Loading map...</div>;
   }
+
+  const circle = window.google.maps.SymbolPath.CIRCLE;
 
   return (
     <div className="map-shell">
@@ -38,15 +38,8 @@ export function MapView({ services, userCoords }) {
         {userCoords && (
           <Marker
             position={userCoords}
-            icon={{
-              path: window.google.maps.SymbolPath.CIRCLE,
-              scale: 8,
-              fillColor: "#1A7A4A",
-              fillOpacity: 1,
-              strokeColor: "#fff",
-              strokeWeight: 2
-            }}
-            title="Your location"
+            title={L.yourLocation}
+            icon={{ path: circle, scale: 8, fillColor: "#1A7A4A", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 2 }}
           />
         )}
         {services.filter(s => s.coords).map(service => (
@@ -55,7 +48,7 @@ export function MapView({ services, userCoords }) {
             position={service.coords}
             onClick={() => setSelected(service)}
             icon={{
-              path: window.google.maps.SymbolPath.CIRCLE,
+              path: circle,
               scale: 7,
               fillColor: TYPE_COLORS[service.type[0]] || TYPE_COLORS.default,
               fillOpacity: 0.9,
@@ -65,19 +58,11 @@ export function MapView({ services, userCoords }) {
           />
         ))}
         {selected && (
-          <InfoWindow
-            position={selected.coords}
-            onCloseClick={() => setSelected(null)}
-          >
+          <InfoWindow position={selected.coords} onCloseClick={() => setSelected(null)}>
             <div className="map-info">
               <p className="map-info-title">{selected.name}</p>
               <p className="map-info-detail">{selected.hours}</p>
-              <a
-                href={`tel:${selected.phone}`}
-                className="map-info-phone"
-              >
-                {selected.phone}
-              </a>
+              <a href={`tel:${selected.phone}`} className="map-info-phone">{selected.phone}</a>
             </div>
           </InfoWindow>
         )}
@@ -85,15 +70,15 @@ export function MapView({ services, userCoords }) {
       <div className="map-legend">
         <span className="legend-item">
           <span className="legend-dot" style={{ background: "#1A7A4A" }} />
-          Your location
+          {L.yourLocation}
         </span>
         <span className="legend-item">
           <span className="legend-dot" style={{ background: "#1D4ED8" }} />
-          Shelter
+          {L.legendShelter}
         </span>
         <span className="legend-item">
           <span className="legend-dot" style={{ background: "#B45309" }} />
-          Food
+          {L.legendFood}
         </span>
       </div>
     </div>

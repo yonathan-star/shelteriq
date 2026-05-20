@@ -85,7 +85,7 @@ export default function App() {
         </div>
       </header>
 
-      <OfflineBanner />
+      <OfflineBanner language={language} />
 
       {!isOutreach && (
         <div className="nav-tabs">
@@ -129,7 +129,7 @@ export default function App() {
         )}
         {view === "map" && (
           <div className="tab-content map-panel">
-            <MapView services={results.length > 0 ? results : []} userCoords={coords} />
+            <MapView services={results.length > 0 ? results : []} userCoords={coords} language={language} />
           </div>
         )}
         {view === "outreach" && (
