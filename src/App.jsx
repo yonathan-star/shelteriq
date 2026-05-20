@@ -9,6 +9,9 @@ import { filterServices, enrichResults } from "./lib/matching";
 import { runComplexIntake } from "./lib/gemini";
 import { useGeolocation } from "./hooks/useGeolocation";
 
+// Remove old ChatInterface session storage key — can cause Gemini history errors
+sessionStorage.removeItem("shelteriq_greeting");
+
 function loadSavedResults() {
   try { return JSON.parse(localStorage.getItem("sq_results") || "null"); } catch { return null; }
 }
