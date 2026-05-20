@@ -20,7 +20,7 @@ export function SkeletonCard() {
   );
 }
 
-export function ServiceCard({ service, rank, need, who }) {
+export function ServiceCard({ service, rank, need, who, language = "en" }) {
   const [script, setScript] = useState(null);
   const [loadingScript, setLoadingScript] = useState(false);
 
@@ -28,7 +28,7 @@ export function ServiceCard({ service, rank, need, who }) {
     if (script || loadingScript) return;
     setLoadingScript(true);
     try {
-      const text = await generateCallScript(service, need, who);
+      const text = await generateCallScript(service, need, who, language);
       setScript(text);
     } catch {
       setScript("Unable to generate guidance — please call the number below directly.");

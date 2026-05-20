@@ -57,7 +57,7 @@ export function OutreachMode({ language }) {
       {loading
         ? [0, 1, 2].map(item => <SkeletonCard key={item} />)
         : results.map((service, i) => (
-          <ServiceCard key={service.id} service={service} rank={i + 1} />
+          <ServiceCard key={service.id} service={service} rank={i + 1} language={language} />
         ))}
     </div>
   );

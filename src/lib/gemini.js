@@ -55,7 +55,7 @@ export async function runComplexIntake(situation, language = "en") {
 }
 
 // Generates a personalized call script for a specific service
-export async function generateCallScript(service, need, who) {
+export async function generateCallScript(service, need, who, language = "en") {
   const model = genAI.getGenerativeModel({
     model: MODEL,
     generationConfig: { maxOutputTokens: 120, temperature: 0.3 }
@@ -69,10 +69,13 @@ export async function generateCallScript(service, need, who) {
     service.eligibility.pets ? "pets allowed" : "no pets",
   ].join(", ");
 
+  const lang = language === "es" ? "Spanish" : language === "ht" ? "Haitian Creole" : "English";
+
   const prompt = `Write 2-3 sentences for someone calling ${service.name} (${service.phone}).
 They need: ${need || "shelter"}. They are: ${who === "family" ? "a parent with children" : "an individual"}.
 Service facts: ${facts}.
-Tell them exactly what to say to get help quickly. Plain language only.`;
+Tell them exactly what to say to get help quickly. Plain language only.
+Respond in ${lang}.`;
 
   const result = await model.generateContent(prompt);
   return result.response.text().trim();
