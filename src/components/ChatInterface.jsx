@@ -62,6 +62,7 @@ export function ChatInterface({ language, onResults }) {
         ]);
       }
     } catch (err) {
+      console.error("ShelterIQ error:", err?.status, err?.message, err);
       const isRateLimit = err?.message?.includes("429") || err?.status === 429;
       setMessages(prev => [
         ...prev,
