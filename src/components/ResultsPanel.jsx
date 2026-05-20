@@ -97,7 +97,7 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
 
       <div className="results-list">
         {results.map((service, i) => (
-          <ServiceCard key={service.id} service={service} rank={i + 1} need={need} who={who} />
+          <ServiceCard key={service.id} service={service} rank={i + 1} need={need} who={who} language={language} />
         ))}
       </div>
 
