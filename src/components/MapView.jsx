@@ -39,7 +39,7 @@ export function MapView({ services, userCoords }) {
           <Marker
             position={userCoords}
             icon={{
-              path: 0,
+              path: window.google.maps.SymbolPath.CIRCLE,
               scale: 8,
               fillColor: "#1A7A4A",
               fillOpacity: 1,
@@ -55,10 +55,9 @@ export function MapView({ services, userCoords }) {
             position={service.coords}
             onClick={() => setSelected(service)}
             icon={{
-              path: 0,
+              path: window.google.maps.SymbolPath.CIRCLE,
               scale: 7,
-              fillColor:
-                TYPE_COLORS[service.type[0]] || TYPE_COLORS.default,
+              fillColor: TYPE_COLORS[service.type[0]] || TYPE_COLORS.default,
               fillOpacity: 0.9,
               strokeColor: "#fff",
               strokeWeight: 2
