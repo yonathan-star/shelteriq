@@ -49,6 +49,9 @@ export function ChatInterface({ language, onResults }) {
           { role: "assistant", content: "__results__" }
         ]);
       } else {
+        if (text === "start") {
+          sessionStorage.setItem("shelteriq_greeting", response.text);
+        }
         setMessages(prev => [
           ...prev,
           { role: "assistant", content: response.text }
@@ -78,7 +81,13 @@ export function ChatInterface({ language, onResults }) {
   useEffect(() => {
     if (!hasGreeted.current) {
       hasGreeted.current = true;
-      sendMessage("start");
+      const cached = sessionStorage.getItem("shelteriq_greeting");
+      if (cached) {
+        setMessages([{ role: "assistant", content: cached }]);
+        setHistory([{ role: "model", parts: [{ text: cached }] }]);
+      } else {
+        sendMessage("start");
+      }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
