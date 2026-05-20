@@ -1,17 +1,30 @@
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
 import { useState } from "react";
+import { services as allServices } from "../data/services";
 import { t } from "../lib/i18n";
+import { Phone, Clock, MapPin, Navigation } from "lucide-react";
 
 const TYPE_COLORS = {
   shelter: "#1D4ED8",
   food: "#B45309",
   mental_health: "#6D28D9",
+  substance_abuse: "#6D28D9",
   veteran: "#065F46",
   medical: "#1A7A4A",
-  default: "#374151"
+  youth: "#92400E",
+  legal: "#374151",
+  default: "#374151",
 };
 
-export function MapView({ services, userCoords, language = "en" }) {
+function getDirectionsUrl(coords, address) {
+  const dest = encodeURIComponent(address || `${coords.lat},${coords.lng}`);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  return isIOS
+    ? `maps://maps.apple.com/?daddr=${dest}`
+    : `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+}
+
+export function MapView({ services: results = [], userCoords, language = "en" }) {
   const [selected, setSelected] = useState(null);
   const L = t(language);
 
@@ -20,10 +33,10 @@ export function MapView({ services, userCoords, language = "en" }) {
   });
 
   const center = userCoords || { lat: 26.1224, lng: -80.1534 };
+  const resultIds = new Set(results.map(s => s.id));
+  const mappable = allServices.filter(s => s.coords);
 
-  if (!isLoaded) {
-    return <div className="map-loading">Loading map...</div>;
-  }
+  if (!isLoaded) return <div className="map-loading">Loading map...</div>;
 
   const circle = window.google.maps.SymbolPath.CIRCLE;
 
@@ -34,39 +47,90 @@ export function MapView({ services, userCoords, language = "en" }) {
         center={center}
         zoom={11}
         options={{ disableDefaultUI: false, zoomControl: true }}
+        onClick={() => setSelected(null)}
       >
         {userCoords && (
           <Marker
             position={userCoords}
             title={L.yourLocation}
-            icon={{ path: circle, scale: 8, fillColor: "#1A7A4A", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 2 }}
+            zIndex={100}
+            icon={{ path: circle, scale: 9, fillColor: "#1A7A4A", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 3 }}
           />
         )}
-        {services.filter(s => s.coords).map(service => (
-          <Marker
-            key={service.id}
-            position={service.coords}
-            onClick={() => setSelected(service)}
-            icon={{
-              path: circle,
-              scale: 7,
-              fillColor: TYPE_COLORS[service.type[0]] || TYPE_COLORS.default,
-              fillOpacity: 0.9,
-              strokeColor: "#fff",
-              strokeWeight: 2
-            }}
-          />
-        ))}
-        {selected && (
-          <InfoWindow position={selected.coords} onCloseClick={() => setSelected(null)}>
+
+        {mappable.map(service => {
+          const isResult = resultIds.has(service.id);
+          const color = TYPE_COLORS[service.type[0]] || TYPE_COLORS.default;
+          return (
+            <Marker
+              key={service.id}
+              position={service.coords}
+              zIndex={isResult ? 10 : 1}
+              onClick={() => setSelected(service)}
+              icon={{
+                path: circle,
+                scale: isResult ? 9 : 6,
+                fillColor: color,
+                fillOpacity: isResult ? 1 : 0.55,
+                strokeColor: isResult ? "#fff" : "#fff",
+                strokeWeight: isResult ? 2.5 : 1.5,
+              }}
+            />
+          );
+        })}
+
+        {selected && selected.coords && (
+          <InfoWindow
+            position={selected.coords}
+            onCloseClick={() => setSelected(null)}
+            options={{ pixelOffset: new window.google.maps.Size(0, -10) }}
+          >
             <div className="map-info">
               <p className="map-info-title">{selected.name}</p>
-              <p className="map-info-detail">{selected.hours}</p>
-              <a href={`tel:${selected.phone}`} className="map-info-phone">{selected.phone}</a>
+
+              <div className="map-info-meta">
+                <span className="map-info-row">
+                  <MapPin size={12} />
+                  {selected.address}
+                </span>
+                <span className="map-info-row">
+                  <Clock size={12} />
+                  {selected.hours}
+                </span>
+                <span className="map-info-row">
+                  <Phone size={12} />
+                  {selected.walkin ? L.walkin : L.callAhead}
+                </span>
+              </div>
+
+              <div className="map-info-badges">
+                {selected.type.map(type => (
+                  <span key={type} className={`type-badge type-${type}`} style={{ fontSize: 10 }}>
+                    {L.typeBadge[type] || type}
+                  </span>
+                ))}
+              </div>
+
+              <div className="map-info-actions">
+                <a href={`tel:${selected.phone}`} className="map-btn map-btn-call">
+                  <Phone size={13} />
+                  {selected.phone}
+                </a>
+                <a
+                  href={getDirectionsUrl(selected.coords, selected.address)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="map-btn map-btn-dir"
+                >
+                  <Navigation size={13} />
+                  {language === "es" ? "Cómo llegar" : language === "ht" ? "Direksyon" : "Directions"}
+                </a>
+              </div>
             </div>
           </InfoWindow>
         )}
       </GoogleMap>
+
       <div className="map-legend">
         <span className="legend-item">
           <span className="legend-dot" style={{ background: "#1A7A4A" }} />
@@ -79,6 +143,10 @@ export function MapView({ services, userCoords, language = "en" }) {
         <span className="legend-item">
           <span className="legend-dot" style={{ background: "#B45309" }} />
           {L.legendFood}
+        </span>
+        <span className="legend-item">
+          <span className="legend-dot" style={{ background: "#6D28D9" }} />
+          {language === "es" ? "Salud mental" : language === "ht" ? "Sante mantal" : "Mental health"}
         </span>
       </div>
     </div>
