@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Clock, MapPin, Phone, Users, Loader, MessageSquare } from "lucide-react";
 import { generateCallScript } from "../lib/gemini";
+import { recordRejection, recordContact } from "../lib/triageMemory";
 import { t } from "../lib/i18n";
 
 export function SkeletonCard() {
@@ -24,7 +25,15 @@ export function SkeletonCard() {
 export function ServiceCard({ service, rank, need, who, language = "en" }) {
   const [script, setScript] = useState(null);
   const [loadingScript, setLoadingScript] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [rejected, setRejected] = useState(false);
+  const [contacted, setContacted] = useState(false);
   const L = t(language);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowFeedback(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleGetScript = async () => {
     if (script || loadingScript) return;
@@ -88,7 +97,11 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
       )}
 
       <div className="card-actions">
-        <a href={`tel:${service.phone}`} className="btn-call">
+        <a
+          href={`tel:${service.phone}`}
+          className="btn-call"
+          onClick={() => { recordContact(service.id); setContacted(true); }}
+        >
           <Phone size={16} />
           <span>{L.callBtn(service.phone)}</span>
         </a>
@@ -105,6 +118,23 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
           </button>
         )}
       </div>
+
+      {showFeedback && (
+        <div className="card-feedback">
+          <button
+            className={`card-feedback-btn${rejected ? " rejected" : ""}`}
+            onClick={() => { recordRejection(service.id); setRejected(true); }}
+          >
+            {rejected ? "Marked as didn't work" : "Didn't work"}
+          </button>
+          <button
+            className={`card-feedback-btn${contacted ? " contacted" : ""}`}
+            onClick={() => { recordContact(service.id); setContacted(true); }}
+          >
+            {contacted ? "Marked as called" : "Called"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
