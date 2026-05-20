@@ -1,34 +1,11 @@
 import { useState } from "react";
 import { Search, ChevronDown, Loader } from "lucide-react";
 
-const NEEDS = [
-  { value: "shelter", label: "A place to sleep tonight" },
-  { value: "food", label: "Food or meals" },
-  { value: "mental_health", label: "Mental health support" },
-  { value: "substance_abuse", label: "Substance abuse treatment" },
-  { value: "veteran", label: "Veteran services" },
-  { value: "youth", label: "Youth services (under 21)" },
-  { value: "other", label: "Other / not sure" },
-];
-
-const WHO = [
-  { value: "alone", label: "Just me" },
-  { value: "family", label: "Me + children" },
-  { value: "partner", label: "Me + partner (no kids)" },
-];
-
-const AREAS = [
-  { value: "south", label: "South Broward (Hollywood, Hallandale, Dania)" },
-  { value: "central", label: "Central Broward (Fort Lauderdale, Lauderhill)" },
-  { value: "north", label: "North Broward (Pompano, Deerfield, Coconut Creek)" },
-  { value: "unsure", label: "Not sure" },
-];
-
 const LABELS = {
   en: {
     heading: "Find help near you",
     need: "What do you need?",
-    who: "Who are you with?",
+    whoLabel: "Who are you with?",
     area: "What part of Broward?",
     submit: "Find services",
     complex: "My situation is more complex",
@@ -36,11 +13,31 @@ const LABELS = {
     complexPlaceholder: "Describe what you need — the AI will read your situation and find the best matches. You can mention family, pets, ID status, veteran status, or anything relevant.",
     complexSubmit: "Find matches for my situation",
     pick: "Select one...",
+    needs: [
+      { value: "shelter", label: "A place to sleep tonight" },
+      { value: "food", label: "Food or meals" },
+      { value: "mental_health", label: "Mental health support" },
+      { value: "substance_abuse", label: "Substance abuse treatment" },
+      { value: "veteran", label: "Veteran services" },
+      { value: "youth", label: "Youth services (under 21)" },
+      { value: "other", label: "Other / not sure" },
+    ],
+    who: [
+      { value: "alone", label: "Just me" },
+      { value: "family", label: "Me + children" },
+      { value: "partner", label: "Me + partner (no kids)" },
+    ],
+    areas: [
+      { value: "south", label: "South Broward (Hollywood, Hallandale, Dania)" },
+      { value: "central", label: "Central Broward (Fort Lauderdale, Lauderhill)" },
+      { value: "north", label: "North Broward (Pompano, Deerfield, Coconut Creek)" },
+      { value: "unsure", label: "Not sure" },
+    ],
   },
   es: {
     heading: "Encontrar ayuda cerca de usted",
     need: "¿Qué necesita?",
-    who: "¿Con quién está?",
+    whoLabel: "¿Con quién está?",
     area: "¿Qué parte de Broward?",
     submit: "Buscar servicios",
     complex: "Mi situación es más compleja",
@@ -48,11 +45,31 @@ const LABELS = {
     complexPlaceholder: "Describa lo que necesita — la IA leerá su situación y encontrará las mejores opciones.",
     complexSubmit: "Encontrar opciones para mi situación",
     pick: "Seleccione...",
+    needs: [
+      { value: "shelter", label: "Un lugar para dormir esta noche" },
+      { value: "food", label: "Comida o alimentos" },
+      { value: "mental_health", label: "Apoyo de salud mental" },
+      { value: "substance_abuse", label: "Tratamiento de abuso de sustancias" },
+      { value: "veteran", label: "Servicios para veteranos" },
+      { value: "youth", label: "Servicios para jóvenes (menores de 21)" },
+      { value: "other", label: "Otro / no estoy seguro" },
+    ],
+    who: [
+      { value: "alone", label: "Solo/a" },
+      { value: "family", label: "Yo y mis hijos" },
+      { value: "partner", label: "Yo y mi pareja (sin hijos)" },
+    ],
+    areas: [
+      { value: "south", label: "Sur de Broward (Hollywood, Hallandale, Dania)" },
+      { value: "central", label: "Centro de Broward (Fort Lauderdale, Lauderhill)" },
+      { value: "north", label: "Norte de Broward (Pompano, Deerfield, Coconut Creek)" },
+      { value: "unsure", label: "No estoy seguro/a" },
+    ],
   },
   ht: {
     heading: "Jwenn èd toupre ou",
     need: "Kisa ou bezwen?",
-    who: "Ou avèk ki moun?",
+    whoLabel: "Ou avèk ki moun?",
     area: "Ki pati nan Broward?",
     submit: "Jwenn sèvis",
     complex: "Sitiyasyon mwen pi konplèks",
@@ -60,6 +77,26 @@ const LABELS = {
     complexPlaceholder: "Dekri sa ou bezwen — AI a pral li sitiyasyon ou epi jwenn pi bon opsyon yo.",
     complexSubmit: "Jwenn opsyon pou sitiyasyon mwen",
     pick: "Chwazi youn...",
+    needs: [
+      { value: "shelter", label: "Yon kote pou dòmi aswè a" },
+      { value: "food", label: "Manje oswa repa" },
+      { value: "mental_health", label: "Sipò sante mantal" },
+      { value: "substance_abuse", label: "Tretman pou drogue" },
+      { value: "veteran", label: "Sèvis veteran" },
+      { value: "youth", label: "Sèvis pou jèn (mwens pase 21 an)" },
+      { value: "other", label: "Lòt / mwen pa konnen" },
+    ],
+    who: [
+      { value: "alone", label: "Mwen poukont mwen" },
+      { value: "family", label: "Mwen ak pitit mwen" },
+      { value: "partner", label: "Mwen ak patnè mwen (san pitit)" },
+    ],
+    areas: [
+      { value: "south", label: "Sid Broward (Hollywood, Hallandale, Dania)" },
+      { value: "central", label: "Sant Broward (Fort Lauderdale, Lauderhill)" },
+      { value: "north", label: "Nò Broward (Pompano, Deerfield, Coconut Creek)" },
+      { value: "unsure", label: "Mwen pa konnen" },
+    ],
   },
 };
 
@@ -96,7 +133,7 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading 
                 onChange={e => setNeed(e.target.value)}
               >
                 <option value="">{L.pick}</option>
-                {NEEDS.map(o => (
+                {L.needs.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
@@ -105,14 +142,14 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading 
           </div>
 
           <div className="form-group">
-            <label className="form-label">{L.who}</label>
+            <label className="form-label">{L.whoLabel || L.who}</label>
             <div className="select-wrap">
               <select
                 className="form-select"
                 value={who}
                 onChange={e => setWho(e.target.value)}
               >
-                {WHO.map(o => (
+                {L.who.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
@@ -128,7 +165,7 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading 
                 value={area}
                 onChange={e => setArea(e.target.value)}
               >
-                {AREAS.map(o => (
+                {L.areas.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
