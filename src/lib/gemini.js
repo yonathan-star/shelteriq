@@ -42,7 +42,7 @@ ${JSON.stringify(services, null, 2)}
 
 export async function runIntake(conversationHistory, language = "en") {
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-2.0-flash",
     systemInstruction: SYSTEM_PROMPT(language),
     generationConfig: {
       maxOutputTokens: 400,
@@ -72,7 +72,7 @@ export async function runIntake(conversationHistory, language = "en") {
 
 export async function runOutreachLookup(query) {
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-2.0-flash",
     generationConfig: { maxOutputTokens: 300, temperature: 0.1 }
   });
 
