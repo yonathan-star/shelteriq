@@ -5,8 +5,10 @@ import { MapView } from "./components/MapView";
 import { OutreachMode } from "./components/OutreachMode";
 import { LanguageToggle } from "./components/LanguageToggle";
 import { OfflineBanner } from "./components/OfflineBanner";
+import { HomePage } from "./components/HomePage";
 import { filterServices, enrichResults } from "./lib/matching";
 import { runComplexIntake } from "./lib/gemini";
+import { recordAttempt, resetMemory, getMemorySummary } from "./lib/triageMemory";
 import { useGeolocation } from "./hooks/useGeolocation";
 
 // Remove old ChatInterface session storage key — can cause Gemini history errors
@@ -17,6 +19,7 @@ function loadSavedResults() {
 }
 
 export default function App() {
+  const [showHome, setShowHome] = useState(true);
   const [language, setLanguage] = useState("en");
   const [view, setView] = useState(() => loadSavedResults() ? "results" : "intake");
   const [results, setResults] = useState(() => loadSavedResults() || []);
@@ -31,6 +34,7 @@ export default function App() {
     const meta = { need, who, area };
     setResults(matched);
     setIntakeMeta(meta);
+    recordAttempt({ query: `${need} · ${who} · ${area}`, resultsShown: matched });
     localStorage.setItem("sq_results", JSON.stringify(matched));
     localStorage.setItem("sq_meta", JSON.stringify(meta));
     localStorage.removeItem("sq_qa");
@@ -43,15 +47,37 @@ export default function App() {
       const response = await runComplexIntake(situation, language);
       if (response.type === "results") {
         const matched = enrichResults(response.data.matches, response.data.reasons, coords);
+        recordAttempt({ query: situation.slice(0, 120), resultsShown: matched });
         setResults(matched);
         localStorage.setItem("sq_results", JSON.stringify(matched));
         localStorage.setItem("sq_meta", JSON.stringify({ complex: true }));
         localStorage.removeItem("sq_qa");
         setView("results");
       }
-      // If it came back with a clarifying question we just ignore and let the user retry
     } catch {
       // Silently fail — user stays on intake
+    }
+    setLoading(false);
+  };
+
+  const handleSuggestNext = async () => {
+    const summary = getMemorySummary();
+    if (!summary) return;
+    setLoading(true);
+    try {
+      const situation = `I need help finding services. I have already been shown ${summary.alreadyShown.length} options that did not work for me. Please find me different options I have not been shown yet.`;
+      const response = await runComplexIntake(situation, language, summary);
+      if (response.type === "results") {
+        const matched = enrichResults(response.data.matches, response.data.reasons, coords);
+        recordAttempt({ query: "suggest-next", resultsShown: matched });
+        setResults(matched);
+        localStorage.setItem("sq_results", JSON.stringify(matched));
+        localStorage.setItem("sq_meta", JSON.stringify({ complex: true }));
+        localStorage.removeItem("sq_qa");
+        setView("results");
+      }
+    } catch {
+      // Silently fail
     }
     setLoading(false);
   };
@@ -59,11 +85,21 @@ export default function App() {
   const handleReset = () => {
     setResults([]);
     setIntakeMeta({});
+    resetMemory();
     localStorage.removeItem("sq_results");
     localStorage.removeItem("sq_meta");
     localStorage.removeItem("sq_qa");
     setView("intake");
   };
+
+  if (showHome) {
+    return (
+      <HomePage
+        onUserMode={() => setShowHome(false)}
+        onOutreachMode={() => { setShowHome(false); setView("outreach"); }}
+      />
+    );
+  }
 
   const isOutreach = view === "outreach";
 
@@ -124,6 +160,7 @@ export default function App() {
               language={language}
               need={intakeMeta.need}
               who={intakeMeta.who}
+              onSuggestNext={handleSuggestNext}
             />
           </div>
         )}

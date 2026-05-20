@@ -4,7 +4,7 @@ import { services } from "../data/services.js";
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
 const MODEL = "gemini-3.1-flash-lite";
 
-const COMPLEX_PROMPT = (language = "en") => `
+const COMPLEX_PROMPT = (language = "en", memorySummary = null) => `
 You are ShelterIQ, an AI resource navigator for people experiencing homelessness in Broward County, Florida.
 
 YOUR ONLY JOB is to match the user's situation to services from the database below. Do NOT answer off-topic questions.
@@ -21,7 +21,21 @@ When you have enough information from the user's description, output ONLY this J
     "service-id-3": "One sentence why this fits."
   }
 }
+${memorySummary ? `
+SESSION MEMORY (this person has used the app before in this session):
+- They have searched ${memorySummary.attemptCount} time(s) already
+- Services already shown to them: ${memorySummary.alreadyShown.join(", ")}
+- Services they called or engaged with: ${memorySummary.contacted.join(", ")}
+- Services they indicated did not work: ${memorySummary.rejected.join(", ")}
+- Known barriers: ${memorySummary.barriers.join(", ")}
+- They have been searching for ${memorySummary.minutesActive} minutes
 
+IMPORTANT: Do NOT suggest any service in the "already shown" list unless
+all other options are exhausted. Prioritize services NOT yet shown.
+If they have been searching for more than 10 minutes with multiple
+attempts, acknowledge this briefly and express that you will try
+harder to find something that works for their specific situation.
+` : ""}
 CRITICAL RULES:
 - NEVER invent phone numbers, addresses, or information not in the database
 - Check eligibility: gender, age, family status, pets, ID requirements
@@ -33,10 +47,10 @@ ${JSON.stringify(services, null, 2)}
 `;
 
 // Used for complex free-text situations only
-export async function runComplexIntake(situation, language = "en") {
+export async function runComplexIntake(situation, language = "en", memorySummary = null) {
   const model = genAI.getGenerativeModel({
     model: MODEL,
-    systemInstruction: COMPLEX_PROMPT(language),
+    systemInstruction: COMPLEX_PROMPT(language, memorySummary),
     generationConfig: { maxOutputTokens: 400, temperature: 0.2 }
   });
 
@@ -110,18 +124,31 @@ Rules:
 }
 
 // Outreach worker keyword lookup — genuinely needs AI for flexible matching
-export async function runOutreachLookup(query) {
+export async function runOutreachLookup(query, language = "en") {
   const model = genAI.getGenerativeModel({
     model: MODEL,
-    generationConfig: { maxOutputTokens: 300, temperature: 0.1 }
+    generationConfig: { maxOutputTokens: 400, temperature: 0.1 }
   });
 
-  const prompt = `You are a homeless service lookup tool for Broward County outreach workers.
-Given this query: "${query}"
-Return matching service IDs from this database as JSON:
-{ "type": "results", "matches": ["id1", "id2", "id3"], "reasons": { "id1": "reason", "id2": "reason", "id3": "reason" } }
-Return ONLY the JSON object. No other text.
-DATABASE: ${JSON.stringify(services, null, 2)}`;
+  const lang = language === "es" ? "Spanish" : language === "ht" ? "Haitian Creole" : "English";
+
+  const prompt = `You are ShelterIQ, a Broward County homeless service lookup tool for outreach workers.
+
+Query from outreach worker: "${query}"
+
+Match this query against the service database below. Consider ALL relevant factors:
+- Gender eligibility (men, women, or both)
+- Age group (youth under 24, adults, families with children)
+- Need type: shelter, food, mental health, substance abuse, medical, legal, veteran services, domestic violence, outreach
+- Special circumstances: no ID, pets allowed, walk-ins, 24/7 availability, language needs
+- Location within Broward County (north/central/south)
+
+Return the 3-5 best-matching service IDs as JSON. Write reasons in ${lang}.
+Output ONLY this JSON, no other text:
+{ "type": "results", "matches": ["id1", "id2", "id3"], "reasons": { "id1": "one sentence why this fits the query", "id2": "one sentence why", "id3": "one sentence why" } }
+
+DATABASE:
+${JSON.stringify(services, null, 2)}`;
 
   const result = await model.generateContent(prompt);
   const text = result.response.text().trim();
