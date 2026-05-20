@@ -10,10 +10,12 @@ const TYPE_COLORS = {
   mental_health: "#6D28D9",
   substance_abuse: "#6D28D9",
   veteran: "#065F46",
-  medical: "#1A7A4A",
+  medical: "#0284C7",
   youth: "#92400E",
-  legal: "#374151",
-  default: "#374151",
+  legal: "#6B7280",
+  outreach: "#6B7280",
+  family: "#1D4ED8",
+  default: "#6B7280",
 };
 
 function getDirectionsUrl(coords, address) {
@@ -136,18 +138,20 @@ export function MapView({ services: results = [], userCoords, language = "en" })
           <span className="legend-dot" style={{ background: "#1A7A4A" }} />
           {L.yourLocation}
         </span>
-        <span className="legend-item">
-          <span className="legend-dot" style={{ background: "#1D4ED8" }} />
-          {L.legendShelter}
-        </span>
-        <span className="legend-item">
-          <span className="legend-dot" style={{ background: "#B45309" }} />
-          {L.legendFood}
-        </span>
-        <span className="legend-item">
-          <span className="legend-dot" style={{ background: "#6D28D9" }} />
-          {language === "es" ? "Salud mental" : language === "ht" ? "Sante mantal" : "Mental health"}
-        </span>
+        {[
+          ["shelter",       "#1D4ED8"],
+          ["food",          "#B45309"],
+          ["mental_health", "#6D28D9"],
+          ["veteran",       "#065F46"],
+          ["medical",       "#0284C7"],
+          ["youth",         "#92400E"],
+          ["legal",         "#6B7280"],
+        ].map(([type, color]) => (
+          <span key={type} className="legend-item">
+            <span className="legend-dot" style={{ background: color }} />
+            {L.typeBadge[type]}
+          </span>
+        ))}
       </div>
     </div>
   );
