@@ -2,44 +2,15 @@ import { useState } from "react";
 import { House, Phone, Send, Loader } from "lucide-react";
 import { ServiceCard, SkeletonCard } from "./ServiceCard";
 import { answerFollowUp } from "../lib/gemini";
+import { t } from "../lib/i18n";
 
 export function ResultsPanel({ results, onReset, language, loading = false, need, who }) {
+  const L = t(language);
   const [question, setQuestion] = useState("");
   const [qaHistory, setQaHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem("sq_qa") || "[]"); } catch { return []; }
   });
   const [qaLoading, setQaLoading] = useState(false);
-
-  const labels = {
-    en: {
-      title: "Top matches for you",
-      reset: "Start over",
-      noResultsTitle: "No matches found",
-      noResults: "Try describing your situation differently, or call the Broward Homeless Helpline directly.",
-      qaHeading: "Ask a question about these services",
-      qaPlaceholder: "e.g. Do I need ID? Can I bring my dog?",
-      qaSubmit: "Ask",
-    },
-    es: {
-      title: "Mejores opciones para usted",
-      reset: "Empezar de nuevo",
-      noResultsTitle: "No se encontraron opciones",
-      noResults: "Intente describir su situacion de otra manera, o llame directamente a la linea de ayuda.",
-      qaHeading: "Haga una pregunta sobre estos servicios",
-      qaPlaceholder: "ej. ¿Necesito identificación? ¿Puedo traer mi perro?",
-      qaSubmit: "Preguntar",
-    },
-    ht: {
-      title: "Meye opsyon pou ou",
-      reset: "Rekomanse",
-      noResultsTitle: "Pa gen rezilta",
-      noResults: "Eseye dekri sitiyasyon ou yon lot jan, oswa rele liy ed Broward la direkteman.",
-      qaHeading: "Poze yon kesyon sou sèvis sa yo",
-      qaPlaceholder: "eg. Èske mwen bezwen ID? Èske mwen ka mennen chen mwen?",
-      qaSubmit: "Mande",
-    },
-  };
-  const L = labels[language] || labels.en;
 
   const handleAsk = async () => {
     if (!question.trim() || qaLoading) return;
@@ -64,8 +35,8 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
     return (
       <div className="results-panel">
         <div className="results-header">
-          <h2 className="results-title">{L.title}</h2>
-          <button onClick={onReset} className="btn-reset">{L.reset}</button>
+          <h2 className="results-title">{L.resultsTitle}</h2>
+          <button onClick={onReset} className="btn-reset">{L.startOver}</button>
         </div>
         <div className="results-list">
           {[0, 1, 2].map(i => <SkeletonCard key={i} />)}
@@ -81,9 +52,9 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
         <h3>{L.noResultsTitle}</h3>
         <p>{L.noResults}</p>
         <a href="tel:9545634357" className="btn-call">
-          <Phone size={16} /><span>Call 954-563-4357</span>
+          <Phone size={16} /><span>954-563-4357</span>
         </a>
-        <button onClick={onReset} className="btn-reset">{L.reset}</button>
+        <button onClick={onReset} className="btn-reset">{L.startOver}</button>
       </div>
     );
   }
@@ -91,8 +62,8 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
   return (
     <div className="results-panel">
       <div className="results-header">
-        <h2 className="results-title">{L.title}</h2>
-        <button onClick={onReset} className="btn-reset">{L.reset}</button>
+        <h2 className="results-title">{L.resultsTitle}</h2>
+        <button onClick={onReset} className="btn-reset">{L.startOver}</button>
       </div>
 
       <div className="results-list">

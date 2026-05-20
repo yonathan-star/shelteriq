@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Clock, MapPin, Phone, Users, Loader, MessageSquare } from "lucide-react";
 import { generateCallScript } from "../lib/gemini";
+import { t } from "../lib/i18n";
 
 export function SkeletonCard() {
   return (
@@ -23,6 +24,7 @@ export function SkeletonCard() {
 export function ServiceCard({ service, rank, need, who, language = "en" }) {
   const [script, setScript] = useState(null);
   const [loadingScript, setLoadingScript] = useState(false);
+  const L = t(language);
 
   const handleGetScript = async () => {
     if (script || loadingScript) return;
@@ -31,7 +33,7 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
       const text = await generateCallScript(service, need, who, language);
       setScript(text);
     } catch {
-      setScript("Unable to generate guidance — please call the number below directly.");
+      setScript(L.callAhead);
     }
     setLoadingScript(false);
   };
@@ -43,7 +45,7 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
         <div>
           <h3 className="service-name">{service.name}</h3>
           {service.distance !== null && (
-            <p className="service-distance">{service.distance} miles away</p>
+            <p className="service-distance">{L.miles(service.distance)}</p>
           )}
         </div>
       </div>
@@ -53,9 +55,9 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
       )}
 
       <div className="type-list">
-        {service.type.map(t => (
-          <span key={t} className={`type-badge type-${t}`}>
-            {t.replace("_", " ")}
+        {service.type.map(type => (
+          <span key={type} className={`type-badge type-${type}`}>
+            {L.typeBadge[type] || type}
           </span>
         ))}
       </div>
@@ -65,22 +67,22 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
         <p className="meta-row"><Clock size={14} /><span>{service.hours}</span></p>
         <p className="meta-row">
           <Phone size={14} />
-          <span>{service.walkin ? "Walk-in accepted" : "Call ahead / referral required"}</span>
+          <span>{service.walkin ? L.walkin : L.callAhead}</span>
         </p>
         {service.eligibility.pets && (
-          <p className="meta-row"><Users size={14} /><span>Pets allowed</span></p>
+          <p className="meta-row"><Users size={14} /><span>{L.pets}</span></p>
         )}
         {service.eligibility.noId && (
-          <p className="meta-row"><Users size={14} /><span>No ID required</span></p>
+          <p className="meta-row"><Users size={14} /><span>{L.noId}</span></p>
         )}
         {service.beds && (
-          <p className="meta-row"><Users size={14} /><span>{service.beds} beds</span></p>
+          <p className="meta-row"><Users size={14} /><span>{L.beds(service.beds)}</span></p>
         )}
       </div>
 
       {script && (
         <div className="call-script">
-          <p className="call-script-label">What to say when you call:</p>
+          <p className="call-script-label">{L.callScriptLabel}</p>
           <p className="call-script-text">{script}</p>
         </div>
       )}
@@ -88,7 +90,7 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
       <div className="card-actions">
         <a href={`tel:${service.phone}`} className="btn-call">
           <Phone size={16} />
-          <span>Call {service.phone}</span>
+          <span>{L.callBtn(service.phone)}</span>
         </a>
         {!script && (
           <button
@@ -99,7 +101,7 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
             {loadingScript
               ? <Loader size={14} className="spin" />
               : <MessageSquare size={14} />}
-            <span>{loadingScript ? "Generating..." : "How to call"}</span>
+            <span>{loadingScript ? L.generating : L.howToCall}</span>
           </button>
         )}
       </div>

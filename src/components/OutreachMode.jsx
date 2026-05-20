@@ -3,6 +3,7 @@ import { runOutreachLookup } from "../lib/gemini";
 import { enrichResults } from "../lib/matching";
 import { ServiceCard, SkeletonCard } from "./ServiceCard";
 import { useGeolocation } from "../hooks/useGeolocation";
+import { t } from "../lib/i18n";
 
 export function OutreachMode({ language }) {
   const [query, setQuery] = useState("");
@@ -10,6 +11,7 @@ export function OutreachMode({ language }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { coords } = useGeolocation();
+  const L = t(language);
 
   const handleSearch = async () => {
     if (!query.trim() || loading) return;
@@ -17,14 +19,10 @@ export function OutreachMode({ language }) {
     setError("");
     try {
       const response = await runOutreachLookup(query, language);
-      const enriched = enrichResults(
-        response.data.matches,
-        response.data.reasons,
-        coords
-      );
+      const enriched = enrichResults(response.data.matches, response.data.reasons, coords);
       setResults(enriched);
     } catch {
-      setError("Search failed. Check your connection and try again.");
+      setError(L.outreachError);
       setResults([]);
     }
     setLoading(false);
@@ -32,30 +30,22 @@ export function OutreachMode({ language }) {
 
   return (
     <div className="outreach-panel">
-      <div>
-        <p className="outreach-header">Outreach Worker Mode</p>
-        <div className="outreach-form">
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleSearch()}
-            placeholder='e.g. "Veteran, male, substance abuse, no ID"'
-            className="outreach-input"
-          />
-          <button
-            onClick={handleSearch}
-            disabled={loading}
-            className="btn-outreach-search"
-          >
-            {loading ? "..." : "Search"}
-          </button>
-        </div>
-        {error && (
-          <p className="form-error">{error}</p>
-        )}
+      <p className="outreach-header">{L.outreachTitle}</p>
+      <div className="outreach-form">
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleSearch()}
+          placeholder={L.outreachPlaceholder}
+          className="outreach-input"
+        />
+        <button onClick={handleSearch} disabled={loading} className="btn-outreach-search">
+          {loading ? "..." : L.outreachSearch}
+        </button>
       </div>
+      {error && <p className="form-error">{error}</p>}
       {loading
-        ? [0, 1, 2].map(item => <SkeletonCard key={item} />)
+        ? [0, 1, 2].map(i => <SkeletonCard key={i} />)
         : results.map((service, i) => (
           <ServiceCard key={service.id} service={service} rank={i + 1} language={language} />
         ))}
