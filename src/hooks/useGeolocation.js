@@ -5,6 +5,9 @@ const isSupported =
 
 export function useGeolocation() {
   const [coords, setCoords] = useState(null);
+  const [heading, setHeading] = useState(null);
+  const [speed, setSpeed] = useState(null);
+  const [accuracy, setAccuracy] = useState(null);
   const [error, setError] = useState(
     isSupported ? null : "Geolocation not supported"
   );
@@ -12,18 +15,36 @@ export function useGeolocation() {
 
   useEffect(() => {
     if (!isSupported) return;
+
+    const updateFromPosition = (pos) => {
+      setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      setHeading(Number.isFinite(pos.coords.heading) ? pos.coords.heading : null);
+      setSpeed(Number.isFinite(pos.coords.speed) ? pos.coords.speed : null);
+      setAccuracy(Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null);
+      setError(null);
+      setLoading(false);
+    };
+
     navigator.geolocation.getCurrentPosition(
-      pos => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setLoading(false);
-      },
+      updateFromPosition,
       err => {
         setError(err.message);
         setLoading(false);
       },
-      { timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
+
+    const watchId = navigator.geolocation.watchPosition(
+      updateFromPosition,
+      err => {
+        setError(err.message);
+        setLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  return { coords, error, loading };
+  return { coords, heading, speed, accuracy, error, loading };
 }
