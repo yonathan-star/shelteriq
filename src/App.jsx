@@ -6,6 +6,7 @@ import { OutreachMode } from "./components/OutreachMode";
 import { LanguageToggle } from "./components/LanguageToggle";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { HomePage } from "./components/HomePage";
+import { CrisisBanner } from "./components/CrisisBanner";
 import { filterServices, enrichResults } from "./lib/matching";
 import { runComplexIntake } from "./lib/gemini";
 import { recordAttempt, resetMemory, getMemorySummary } from "./lib/triageMemory";
@@ -27,6 +28,7 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem("sq_meta") || "{}"); } catch { return {}; }
   });
   const [loading, setLoading] = useState(false);
+  const [crisis, setCrisis] = useState(null); // { type, situation }
   const { coords } = useGeolocation();
 
   const handleSimpleSubmit = (need, who, area) => {
@@ -82,9 +84,24 @@ export default function App() {
     setLoading(false);
   };
 
+  const handleCrisisDetected = (type, situation) => {
+    setCrisis({ type, situation });
+    setView("crisis");
+  };
+
+  const handleCrisisDismiss = () => {
+    // After dismissing crisis banner, run the intake as normal
+    if (crisis?.situation) {
+      handleComplexSubmit(crisis.situation);
+    }
+    setCrisis(null);
+    setView("results");
+  };
+
   const handleReset = () => {
     setResults([]);
     setIntakeMeta({});
+    setCrisis(null);
     resetMemory();
     localStorage.removeItem("sq_results");
     localStorage.removeItem("sq_meta");
@@ -123,7 +140,7 @@ export default function App() {
 
       <OfflineBanner language={language} />
 
-      {!isOutreach && (
+      {!isOutreach && view !== "crisis" && (
         <div className="nav-tabs">
           {[
             { id: "intake", label: "Intake" },
@@ -142,12 +159,22 @@ export default function App() {
       )}
 
       <main className="app-main">
+        {view === "crisis" && crisis && (
+          <div className="tab-content scroll-panel">
+            <CrisisBanner
+              crisisType={crisis.type}
+              language={language}
+              onDismiss={handleCrisisDismiss}
+            />
+          </div>
+        )}
         {view === "intake" && (
           <div className="tab-content scroll-panel">
             <IntakeForm
               language={language}
               onSimpleSubmit={handleSimpleSubmit}
               onComplexSubmit={handleComplexSubmit}
+              onCrisisDetected={handleCrisisDetected}
               loading={loading}
             />
           </div>

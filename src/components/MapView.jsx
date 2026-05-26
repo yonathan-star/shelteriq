@@ -1,8 +1,9 @@
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
 import { useState } from "react";
 import { services as allServices } from "../data/services";
+import { safeSpots, SPOT_COLORS, SPOT_LABELS } from "../data/safeSpots";
 import { t } from "../lib/i18n";
-import { Phone, Clock, MapPin, Navigation } from "lucide-react";
+import { Phone, Clock, MapPin, Navigation, Layers } from "lucide-react";
 
 const TYPE_COLORS = {
   shelter: "#1D4ED8",
@@ -28,7 +29,10 @@ function getDirectionsUrl(coords, address) {
 
 export function MapView({ services: results = [], userCoords, language = "en" }) {
   const [selected, setSelected] = useState(null);
+  const [selectedSpot, setSelectedSpot] = useState(null);
+  const [showSafeSpots, setShowSafeSpots] = useState(false);
   const L = t(language);
+  const spotLabels = SPOT_LABELS[language] || SPOT_LABELS.en;
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
@@ -44,12 +48,26 @@ export function MapView({ services: results = [], userCoords, language = "en" })
 
   return (
     <div className="map-shell">
+      {/* Safe Spots toggle */}
+      <div className="safe-spots-bar">
+        <button
+          className={`safe-spots-toggle ${showSafeSpots ? "active" : ""}`}
+          onClick={() => setShowSafeSpots(v => !v)}
+        >
+          <Layers size={14} />
+          <span>{showSafeSpots ? L.safeSpotsOff : L.safeSpotsToggle}</span>
+        </button>
+        {showSafeSpots && (
+          <p className="safe-spots-hint">{L.safeSpotsHint}</p>
+        )}
+      </div>
+
       <GoogleMap
         mapContainerClassName="map-container"
         center={center}
         zoom={11}
         options={{ disableDefaultUI: false, zoomControl: true }}
-        onClick={() => setSelected(null)}
+        onClick={() => { setSelected(null); setSelectedSpot(null); }}
       >
         {userCoords && (
           <Marker
@@ -80,6 +98,61 @@ export function MapView({ services: results = [], userCoords, language = "en" })
             />
           );
         })}
+
+        {/* Safe Waiting Spots layer */}
+        {showSafeSpots && safeSpots.map(spot => (
+          <Marker
+            key={spot.id}
+            position={spot.coords}
+            zIndex={5}
+            onClick={() => { setSelectedSpot(spot); setSelected(null); }}
+            icon={{
+              path: circle,
+              scale: 8,
+              fillColor: SPOT_COLORS[spot.category] || "#6B7280",
+              fillOpacity: 0.9,
+              strokeColor: "#fff",
+              strokeWeight: 2,
+            }}
+          />
+        ))}
+
+        {selectedSpot && selectedSpot.coords && (
+          <InfoWindow
+            position={selectedSpot.coords}
+            onCloseClick={() => setSelectedSpot(null)}
+            options={{ pixelOffset: new window.google.maps.Size(0, -10) }}
+          >
+            <div className="map-info">
+              <p className="map-info-title">{selectedSpot.name}</p>
+              <div className="map-info-meta">
+                <span className="map-info-row"><MapPin size={12} />{selectedSpot.address}</span>
+                <span className="map-info-row"><Clock size={12} />{selectedSpot.hours}</span>
+              </div>
+              <span className={`spot-category-badge cat-${selectedSpot.category}`}>
+                {spotLabels[selectedSpot.category] || selectedSpot.category}
+              </span>
+              {selectedSpot.note && (
+                <p className="spot-note">{selectedSpot.note}</p>
+              )}
+              <div className="map-info-actions">
+                <a href={`tel:${selectedSpot.phone}`} className="map-btn map-btn-call">
+                  <Phone size={13} />
+                  {selectedSpot.phone.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")}
+                </a>
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(selectedSpot.address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="map-btn map-btn-dir"
+                >
+                  <Navigation size={13} />
+                  {language === "es" ? "Cómo llegar" : language === "ht" ? "Direksyon" : "Directions"}
+                </a>
+              </div>
+            </div>
+          </InfoWindow>
+        )}
 
         {selected && selected.coords && (
           <InfoWindow
@@ -150,6 +223,12 @@ export function MapView({ services: results = [], userCoords, language = "en" })
           <span key={type} className="legend-item">
             <span className="legend-dot" style={{ background: color }} />
             {L.typeBadge[type]}
+          </span>
+        ))}
+        {showSafeSpots && Object.entries(SPOT_COLORS).map(([cat, color]) => (
+          <span key={cat} className="legend-item">
+            <span className="legend-dot legend-dot-square" style={{ background: color }} />
+            {spotLabels[cat]}
           </span>
         ))}
       </div>
