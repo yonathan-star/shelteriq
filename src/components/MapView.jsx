@@ -234,7 +234,16 @@ export function MapView({
 
   const handleNavigate = (service) => {
     setSelected(null);
+    setSelectedSpot(null);
     setNavDestination({ name: service.name, address: service.address, coords: service.coords });
+    setFollowMode(true);
+    setArrived(false);
+  };
+
+  const handleNavigateToSafeSpot = (spot) => {
+    setSelected(null);
+    setSelectedSpot(null);
+    setNavDestination({ name: spot.name, address: spot.address, coords: spot.coords });
     setFollowMode(true);
     setArrived(false);
   };
@@ -527,15 +536,13 @@ export function MapView({
                   <Phone size={13} />
                   {selectedSpot.phone.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")}
                 </a>
-                <a
-                  href={getDirectionsUrl(selectedSpot.coords, selectedSpot.address)}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
                   className="map-btn map-btn-dir"
+                  onClick={() => handleNavigateToSafeSpot(selectedSpot)}
                 >
                   <Navigation size={13} />
-                  {language === "es" ? "Cómo llegar" : language === "ht" ? "Direksyon" : "Directions"}
-                </a>
+                  {language === "es" ? "Navegar" : language === "ht" ? "Direksyon" : "Navigate"}
+                </button>
               </div>
             </div>
           </OverlayView>
