@@ -31,11 +31,11 @@ const TYPE_COLORS = {
   default: "#6B7280",
 };
 
-const SPOT_BADGE_STYLES = {
-  library: { backgroundColor: "transparent", color: "#1D4ED8", border: "none" },
-  cooling: { backgroundColor: "transparent", color: "#065F46", border: "none" },
-  "24hr": { backgroundColor: "transparent", color: "#92400E", border: "none" },
-  transit: { backgroundColor: "transparent", color: "#374151", border: "none" },
+const SPOT_LABEL_STYLES = {
+  library: { color: "#1D4ED8" },
+  cooling: { color: "#065F46" },
+  "24hr": { color: "#92400E" },
+  transit: { color: "#374151" },
 };
 
 function getDirectionsUrl(coords, address) {
@@ -502,12 +502,23 @@ export function MapView({
                   {selectedSpot.hours}
                 </span>
               </div>
-              <div
-                className="spot-category-chip"
-                style={SPOT_BADGE_STYLES[selectedSpot.category] || { backgroundColor: "transparent", color: "#374151", border: "none" }}
+              <span
+                style={{
+                  background: "none",
+                  backgroundColor: "transparent",
+                  border: "0",
+                  boxShadow: "none",
+                  padding: 0,
+                  marginTop: 8,
+                  display: "inline",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  ...(SPOT_LABEL_STYLES[selectedSpot.category] || { color: "#374151" }),
+                }}
               >
                 {spotLabels[selectedSpot.category] || selectedSpot.category}
-              </div>
+              </span>
               {selectedSpot.note && <p className="spot-note">{selectedSpot.note}</p>}
               <div className="map-info-actions">
                 <a href={`tel:${selectedSpot.phone}`} className="map-btn map-btn-call">

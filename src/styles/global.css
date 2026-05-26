@@ -1943,14 +1943,6 @@ header > div:first-child { min-width: 0; }
   line-height: 1.4;
 }
 
-.spot-category-chip {
-  display: inline;
-  font-size: 11px;
-  font-weight: 700;
-  margin-top: 8px;
-  line-height: 1.2;
-}
-
 .cat-library  { background: #DBEAFE; color: #1D4ED8; }
 .cat-cooling  { background: #D1FAE5; color: #065F46; }
 .cat-24hr     { background: #FEF3C7; color: #92400E; }
