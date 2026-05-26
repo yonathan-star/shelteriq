@@ -291,25 +291,24 @@ export function MapView({
                   {selectedSpot.hours}
                 </span>
               </div>
-              <div className="spot-badge-wrap">
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    borderRadius: 999,
-                    padding: "6px 10px",
-                    lineHeight: 1.2,
-                    ...(SPOT_BADGE_STYLES[selectedSpot.category] || {
-                      backgroundColor: "#F3F4F6",
-                      color: "#374151",
-                      border: "1px solid #D1D5DB",
-                    }),
-                  }}
-                >
-                  {spotLabels[selectedSpot.category] || selectedSpot.category}
-                </div>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  borderRadius: 999,
+                  padding: "6px 10px",
+                  marginTop: 8,
+                  lineHeight: 1.2,
+                  ...(SPOT_BADGE_STYLES[selectedSpot.category] || {
+                    backgroundColor: "#F3F4F6",
+                    color: "#374151",
+                    border: "1px solid #D1D5DB",
+                  }),
+                }}
+              >
+                {spotLabels[selectedSpot.category] || selectedSpot.category}
               </div>
               {selectedSpot.note && <p className="spot-note">{selectedSpot.note}</p>}
               <div className="map-info-actions">
