@@ -42,8 +42,14 @@ CRITICAL RULES:
 - If someone is in immediate danger, say: "Please call 911 now"
 - If the description is unclear, ask ONE clarifying question
 
-AVAILABLE SERVICES:
-${JSON.stringify(services, null, 2)}
+AVAILABLE SERVICES (compact — use id to match):
+${JSON.stringify(services.map(s => ({
+  id: s.id, name: s.name, type: s.type, walkin: s.walkin,
+  gender: s.eligibility.gender, families: s.eligibility.families,
+  youth: s.eligibility.youth, noId: s.eligibility.noId,
+  pets: s.eligibility.pets, veteran: s.eligibility.veteran,
+  area: s.coords ? (s.coords.lat < 26.07 ? "south" : s.coords.lat > 26.20 ? "north" : "central") : "any",
+})))}
 `;
 
 // Used for complex free-text situations only
@@ -132,23 +138,35 @@ export async function runOutreachLookup(query, language = "en") {
 
   const lang = language === "es" ? "Spanish" : language === "ht" ? "Haitian Creole" : "English";
 
+  // Send only the fields needed for matching — keeps the prompt small enough
+  // to fit in the free-tier context window without truncation or timeouts.
+  const compactDB = services.map(s => ({
+    id: s.id,
+    name: s.name,
+    type: s.type,
+    area: s.coords
+      ? (s.coords.lat < 26.07 ? "south" : s.coords.lat > 26.20 ? "north" : "central")
+      : "unknown",
+    walkin: s.walkin,
+    gender: s.eligibility.gender,
+    families: s.eligibility.families,
+    youth: s.eligibility.youth,
+    noId: s.eligibility.noId,
+    pets: s.eligibility.pets,
+    veteran: s.eligibility.veteran,
+  }));
+
   const prompt = `You are ShelterIQ, a Broward County homeless service lookup tool for outreach workers.
 
-Query from outreach worker: "${query}"
+Query: "${query}"
 
-Match this query against the service database below. Consider ALL relevant factors:
-- Gender eligibility (men, women, or both)
-- Age group (youth under 24, adults, families with children)
-- Need type: shelter, food, mental health, substance abuse, medical, legal, veteran services, domestic violence, outreach
-- Special circumstances: no ID, pets allowed, walk-ins, 24/7 availability, language needs
-- Location within Broward County (north/central/south)
+Match the query to 3-5 services. Consider: type, gender, families, youth, noId, pets, veteran, area (north/central/south), walkin.
 
-Return the 3-5 best-matching service IDs as JSON. Write reasons in ${lang}.
-Output ONLY this JSON, no other text:
-{ "type": "results", "matches": ["id1", "id2", "id3"], "reasons": { "id1": "one sentence why this fits the query", "id2": "one sentence why", "id3": "one sentence why" } }
+Return ONLY this JSON (reasons in ${lang}):
+{"type":"results","matches":["id1","id2","id3"],"reasons":{"id1":"one sentence","id2":"one sentence","id3":"one sentence"}}
 
-DATABASE:
-${JSON.stringify(services, null, 2)}`;
+SERVICES:
+${JSON.stringify(compactDB)}`;
 
   const result = await model.generateContent(prompt);
   const text = result.response.text().trim();
