@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { House, Phone, Send, Loader } from "lucide-react";
+import { House, Phone, Send, Loader, Map } from "lucide-react";
 import { ServiceCard, SkeletonCard } from "./ServiceCard";
 import { MemoryBanner } from "./MemoryBanner";
 import { answerFollowUp } from "../lib/gemini";
 import { t } from "../lib/i18n";
 
-export function ResultsPanel({ results, onReset, language, loading = false, need, who, onSuggestNext }) {
+export function ResultsPanel({ results, onReset, language, loading = false, need, who, onSuggestNext, onViewMap }) {
   const L = t(language);
   const [question, setQuestion] = useState("");
   const [qaHistory, setQaHistory] = useState(() => {
@@ -64,7 +64,15 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
     <div className="results-panel">
       <div className="results-header">
         <h2 className="results-title">{L.resultsTitle}</h2>
-        <button onClick={onReset} className="btn-reset">{L.startOver}</button>
+        <div className="results-header-actions">
+          {onViewMap && (
+            <button onClick={onViewMap} className="btn-view-map">
+              <Map size={14} />
+              <span>Map</span>
+            </button>
+          )}
+          <button onClick={onReset} className="btn-reset">{L.startOver}</button>
+        </div>
       </div>
 
       <MemoryBanner onSuggestNext={onSuggestNext} />
