@@ -21,10 +21,10 @@ const TYPE_COLORS = {
 
 // Inline styles for category badges — avoids CSS class scoping issues inside Google Maps InfoWindow
 const SPOT_BADGE_STYLES = {
-  library:  { background: "#DBEAFE", color: "#1D4ED8" },
-  cooling:  { background: "#D1FAE5", color: "#065F46" },
-  "24hr":   { background: "#FEF3C7", color: "#92400E" },
-  transit:  { background: "#F3F4F6", color: "#374151" },
+  library:  { backgroundColor: "#DBEAFE", color: "#1D4ED8", border: "1px solid #93C5FD" },
+  cooling:  { backgroundColor: "#D1FAE5", color: "#065F46", border: "1px solid #6EE7B7" },
+  "24hr":   { backgroundColor: "#FEF3C7", color: "#92400E", border: "1px solid #FCD34D" },
+  transit:  { backgroundColor: "#F3F4F6", color: "#374151", border: "1px solid #D1D5DB" },
 };
 
 function getDirectionsUrl(coords, address) {
@@ -237,7 +237,7 @@ export function MapView({ services: results = [], userCoords, language = "en" })
                   {selectedSpot.phone.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")}
                 </a>
                 <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(selectedSpot.address)}`}
+                  href={getDirectionsUrl(selectedSpot.coords, selectedSpot.address)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="map-btn map-btn-dir"

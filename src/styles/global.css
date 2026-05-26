@@ -1789,6 +1789,29 @@ header > div:first-child { min-width: 0; }
   color: var(--green-700);
 }
 
+.btn-navigate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--green-300);
+  border-radius: var(--r-sm);
+  background: var(--green-50);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green-700);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.btn-navigate:active {
+  background: var(--green-100);
+  border-color: var(--green-500);
+  color: var(--green-800);
+}
+
 /* Check-in flow */
 .checkin-flow {
   margin-top: 10px;
@@ -1925,8 +1948,12 @@ header > div:first-child { min-width: 0; }
   font-size: 11px;
   font-weight: 600;
   border-radius: 20px;
-  padding: 2px 8px;
+  padding: 3px 9px;
   margin-top: 4px;
+  background-color: #F3F4F6;
+  color: #374151;
+  border: 1px solid #D1D5DB;
+  line-height: 1.2;
 }
 
 .cat-library  { background: #DBEAFE; color: #1D4ED8; }

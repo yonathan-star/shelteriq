@@ -53,6 +53,16 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
     setLoadingScript(false);
   };
 
+  const handleNavigate = () => {
+    if (!service.coords) return;
+    const dest = encodeURIComponent(service.address || `${service.coords.lat},${service.coords.lng}`);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const url = isIOS
+      ? `maps://maps.apple.com/?daddr=${dest}`
+      : `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="service-card">
       <div className="service-top">
@@ -137,6 +147,16 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
           </button>
         )}
       </div>
+
+      {service.coords && (
+        <button
+          className="btn-navigate"
+          onClick={handleNavigate}
+        >
+          <Navigation size={13} />
+          <span>{language === "es" ? "Navegar" : language === "ht" ? "Direksyon" : "Navigate"}</span>
+        </button>
+      )}
 
       {/* "I'm Here" check-in */}
       {!showCheckin ? (

@@ -4,7 +4,25 @@ import { getIntelligenceSummary } from "../lib/searchIntelligence";
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
 
+function buildLocalGapAnalysis(summary) {
+  const topTypes = Object.entries(summary.typeFrequency)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([type]) => type.replaceAll("_", " "));
+  const topLabel = topTypes.length > 0 ? topTypes.join(", ") : "general support";
+  const unmetCount = summary.lowResultSearches.length;
+  const unmetLabel = unmetCount > 0
+    ? `The clearest unmet needs came from ${unmetCount} search${unmetCount === 1 ? "" : "es"} with weak matches, especially ${summary.lowResultSearches.slice(0, 2).join(" and ")}.`
+    : "Most searches still returned usable matches, so the pressure point appears to be capacity and fit rather than a total lack of services.";
+
+  return `Across ${summary.totalSearches} searches over ${summary.sessionMinutes} minute(s), demand clustered around ${topLabel}. ${unmetLabel} Recent activity suggests staff need faster access to flexible placements that can absorb combined barriers without repeated dead ends.`;
+}
+
 async function generateGapAnalysis(summary) {
+  if (!import.meta.env.VITE_GEMINI_API_KEY) {
+    return buildLocalGapAnalysis(summary);
+  }
+
   const model = genAI.getGenerativeModel({
     model: "gemini-2.0-flash",
     generationConfig: { maxOutputTokens: 300, temperature: 0.4 }
@@ -26,7 +44,7 @@ Search data:
 Write the gap analysis now:`;
 
   const result = await model.generateContent(prompt);
-  return result.response.text();
+  return result.response.text() || buildLocalGapAnalysis(summary);
 }
 
 export function IntelligenceDashboard() {
@@ -44,7 +62,8 @@ export function IntelligenceDashboard() {
       const text = await generateGapAnalysis(summary);
       setAnalysis(text);
     } catch {
-      setError("Could not generate analysis. Check your API key.");
+      setAnalysis(buildLocalGapAnalysis(summary));
+      setError("Showing local analysis because AI generation is unavailable.");
     }
     setLoading(false);
   };
