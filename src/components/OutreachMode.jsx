@@ -17,7 +17,7 @@ function loadOutreachState() {
   }
 }
 
-export function OutreachMode({ language }) {
+export function OutreachMode({ language, onNavigateService }) {
   const savedState = loadOutreachState();
   const [activeTab, setActiveTab] = useState(savedState.activeTab || "search");
   const [query, setQuery] = useState(savedState.query || "");
@@ -107,7 +107,13 @@ export function OutreachMode({ language }) {
           {loading
             ? [0, 1, 2].map(i => <SkeletonCard key={i} />)
             : results.map((service, i) => (
-              <ServiceCard key={service.id} service={service} rank={i + 1} language={language} />
+              <ServiceCard
+                key={service.id}
+                service={service}
+                rank={i + 1}
+                language={language}
+                onNavigate={onNavigateService}
+              />
             ))}
         </>
       )}

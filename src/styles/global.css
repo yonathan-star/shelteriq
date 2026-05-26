@@ -1956,12 +1956,6 @@ header > div:first-child { min-width: 0; }
   line-height: 1.2;
 }
 
-.spot-badge-wrap {
-  display: inline-flex;
-  width: fit-content;
-  margin-top: 8px;
-}
-
 .cat-library  { background: #DBEAFE; color: #1D4ED8; }
 .cat-cooling  { background: #D1FAE5; color: #065F46; }
 .cat-24hr     { background: #FEF3C7; color: #92400E; }

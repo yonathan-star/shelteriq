@@ -226,7 +226,7 @@ export default function App() {
         )}
         {view === "outreach" && (
           <div className="tab-content scroll-panel">
-            <OutreachMode language={language} />
+            <OutreachMode language={language} onNavigateService={handleNavigateToService} />
           </div>
         )}
       </main>
