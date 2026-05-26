@@ -1956,6 +1956,15 @@ header > div:first-child { min-width: 0; }
   line-height: 1.2;
 }
 
+.spot-badge-wrap {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 4px;
+  background: #FFFFFF;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 999px;
+}
+
 .cat-library  { background: #DBEAFE; color: #1D4ED8; }
 .cat-cooling  { background: #D1FAE5; color: #065F46; }
 .cat-24hr     { background: #FEF3C7; color: #92400E; }
@@ -2013,6 +2022,15 @@ header > div:first-child { min-width: 0; }
   font-size: 11px;
   color: var(--green-600);
   font-weight: 600;
+}
+
+.nav-bar-link {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--green-700);
+  font-weight: 600;
+  text-decoration: none;
 }
 
 .nav-bar-close {

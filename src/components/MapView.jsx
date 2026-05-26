@@ -1,5 +1,5 @@
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, DirectionsRenderer } from "@react-google-maps/api";
-import { useState, useEffect, useRef } from "react";
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
+import { useState } from "react";
 import { services as allServices } from "../data/services";
 import { safeSpots, SPOT_COLORS, SPOT_LABELS } from "../data/safeSpots";
 import { t } from "../lib/i18n";
@@ -40,9 +40,6 @@ export function MapView({ services: results = [], userCoords, language = "en" })
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [showSafeSpots, setShowSafeSpots] = useState(false);
   const [navDestination, setNavDestination] = useState(null); // { name, address, coords }
-  const [directions, setDirections] = useState(null);
-  const [navInfo, setNavInfo] = useState(null); // { duration, distance }
-  const prevNavKey = useRef(null);
 
   const L = t(language);
   const spotLabels = SPOT_LABELS[language] || SPOT_LABELS.en;
@@ -51,49 +48,14 @@ export function MapView({ services: results = [], userCoords, language = "en" })
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
   });
 
-  // Fetch walking directions when nav destination is set
-  useEffect(() => {
-    if (!navDestination || !userCoords || !isLoaded) {
-      setDirections(null);
-      setNavInfo(null);
-      prevNavKey.current = null;
-      return;
-    }
-    const key = `${navDestination.coords.lat},${navDestination.coords.lng}`;
-    if (prevNavKey.current === key) return;
-    prevNavKey.current = key;
-
-    const svc = new window.google.maps.DirectionsService();
-    svc.route(
-      {
-        origin: userCoords,
-        destination: navDestination.coords,
-        travelMode: window.google.maps.TravelMode.WALKING,
-      },
-      (result, status) => {
-        if (status === "OK") {
-          setDirections(result);
-          const leg = result.routes[0]?.legs[0];
-          setNavInfo({ duration: leg?.duration?.text, distance: leg?.distance?.text });
-        }
-      }
-    );
-  }, [navDestination, userCoords, isLoaded]);
-
   const handleNavigate = (service) => {
     setSelected(null);
-    if (userCoords) {
-      setNavDestination({ name: service.name, address: service.address, coords: service.coords });
-    } else {
-      window.open(getDirectionsUrl(service.coords, service.address), "_blank", "noopener,noreferrer");
-    }
+    setNavDestination({ name: service.name, address: service.address, coords: service.coords });
+    window.open(getDirectionsUrl(service.coords, service.address), "_blank", "noopener,noreferrer");
   };
 
   const clearNav = () => {
     setNavDestination(null);
-    setDirections(null);
-    setNavInfo(null);
-    prevNavKey.current = null;
   };
 
   const center = userCoords || { lat: 26.1224, lng: -80.1534 };
@@ -126,12 +88,15 @@ export function MapView({ services: results = [], userCoords, language = "en" })
           <Navigation size={14} className="nav-bar-icon" />
           <div className="nav-bar-info">
             <span className="nav-bar-dest">{navDestination.name}</span>
-            {navInfo && (
-              <span className="nav-bar-meta">
-                {navInfo.duration} · {navInfo.distance} walking
-              </span>
-            )}
-            {!navInfo && <span className="nav-bar-meta">Calculating route…</span>}
+            <span className="nav-bar-meta">Navigation opened in your maps app</span>
+            <a
+              href={getDirectionsUrl(navDestination.coords, navDestination.address)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-bar-link"
+            >
+              Open navigation again
+            </a>
           </div>
           <button className="nav-bar-close" onClick={clearNav} title="Clear route">
             <X size={14} />
@@ -194,21 +159,6 @@ export function MapView({ services: results = [], userCoords, language = "en" })
           />
         ))}
 
-        {/* Walking route */}
-        {directions && (
-          <DirectionsRenderer
-            directions={directions}
-            options={{
-              suppressMarkers: true,
-              polylineOptions: {
-                strokeColor: "#1A7A4A",
-                strokeOpacity: 0.85,
-                strokeWeight: 5,
-              },
-            }}
-          />
-        )}
-
         {selectedSpot && selectedSpot.coords && (
           <InfoWindow
             position={selectedSpot.coords}
@@ -222,12 +172,27 @@ export function MapView({ services: results = [], userCoords, language = "en" })
                 <span className="map-info-row"><Clock size={12} />{selectedSpot.hours}</span>
               </div>
               {/* Inline styles ensure badge colors render inside Google Maps InfoWindow */}
-              <span
-                className="spot-category-badge"
-                style={SPOT_BADGE_STYLES[selectedSpot.category] || { background: "#F3F4F6", color: "#374151" }}
-              >
-                {spotLabels[selectedSpot.category] || selectedSpot.category}
-              </span>
+              <div className="spot-badge-wrap">
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    borderRadius: 999,
+                    padding: "4px 10px",
+                    lineHeight: 1.2,
+                    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.08)",
+                    ...(SPOT_BADGE_STYLES[selectedSpot.category] || {
+                      backgroundColor: "#F3F4F6",
+                      color: "#374151",
+                      border: "1px solid #D1D5DB",
+                    }),
+                  }}
+                >
+                  {spotLabels[selectedSpot.category] || selectedSpot.category}
+                </span>
+              </div>
               {selectedSpot.note && (
                 <p className="spot-note">{selectedSpot.note}</p>
               )}

@@ -163,7 +163,6 @@ export default function App() {
             <button
               key={tab.id}
               onClick={() => setStandardView(tab.id)}
-              disabled={results.length === 0 && tab.id !== "intake"}
               className={`nav-tab ${view === tab.id ? "active" : ""}`}
             >
               {tab.label}
