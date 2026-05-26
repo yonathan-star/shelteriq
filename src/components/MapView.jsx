@@ -1,8 +1,9 @@
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
-import { useState } from "react";
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from "@react-google-maps/api";
+import { useEffect, useRef, useState } from "react";
 import { services as allServices } from "../data/services";
 import { safeSpots, SPOT_COLORS, SPOT_LABELS } from "../data/safeSpots";
 import { t } from "../lib/i18n";
+import { getDistanceMiles } from "../lib/geo";
 import { Phone, Clock, MapPin, Navigation, Layers, X } from "lucide-react";
 
 const TYPE_COLORS = {
@@ -40,6 +41,7 @@ export function MapView({ services: results = [], userCoords, language = "en" })
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [showSafeSpots, setShowSafeSpots] = useState(false);
   const [navDestination, setNavDestination] = useState(null); // { name, address, coords }
+  const mapRef = useRef(null);
 
   const L = t(language);
   const spotLabels = SPOT_LABELS[language] || SPOT_LABELS.en;
@@ -48,10 +50,17 @@ export function MapView({ services: results = [], userCoords, language = "en" })
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
   });
 
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current || !navDestination?.coords || !userCoords) return;
+    const bounds = new window.google.maps.LatLngBounds();
+    bounds.extend(userCoords);
+    bounds.extend(navDestination.coords);
+    mapRef.current.fitBounds(bounds, 72);
+  }, [isLoaded, navDestination, userCoords]);
+
   const handleNavigate = (service) => {
     setSelected(null);
     setNavDestination({ name: service.name, address: service.address, coords: service.coords });
-    window.open(getDirectionsUrl(service.coords, service.address), "_blank", "noopener,noreferrer");
   };
 
   const clearNav = () => {
@@ -61,6 +70,12 @@ export function MapView({ services: results = [], userCoords, language = "en" })
   const center = userCoords || { lat: 26.1224, lng: -80.1534 };
   const resultIds = new Set(results.map(s => s.id));
   const mappable = allServices.filter(s => s.coords);
+  const navDistance = navDestination?.coords && userCoords
+    ? getDistanceMiles(userCoords, navDestination.coords).toFixed(1)
+    : null;
+  const navPath = navDestination?.coords && userCoords
+    ? [userCoords, navDestination.coords]
+    : null;
 
   if (!isLoaded) return <div className="map-loading">Loading map...</div>;
 
@@ -88,14 +103,16 @@ export function MapView({ services: results = [], userCoords, language = "en" })
           <Navigation size={14} className="nav-bar-icon" />
           <div className="nav-bar-info">
             <span className="nav-bar-dest">{navDestination.name}</span>
-            <span className="nav-bar-meta">Navigation opened in your maps app</span>
+            {navDistance
+              ? <span className="nav-bar-meta">{navDistance} miles away · in-app guidance active</span>
+              : <span className="nav-bar-meta">Turn on location to use in-app navigation</span>}
             <a
               href={getDirectionsUrl(navDestination.coords, navDestination.address)}
               target="_blank"
               rel="noopener noreferrer"
               className="nav-bar-link"
             >
-              Open navigation again
+              Open in maps app
             </a>
           </div>
           <button className="nav-bar-close" onClick={clearNav} title="Clear route">
@@ -109,6 +126,7 @@ export function MapView({ services: results = [], userCoords, language = "en" })
         center={center}
         zoom={11}
         options={{ disableDefaultUI: false, zoomControl: true }}
+        onLoad={(map) => { mapRef.current = map; }}
         onClick={() => { setSelected(null); setSelectedSpot(null); }}
       >
         {userCoords && (
@@ -159,6 +177,22 @@ export function MapView({ services: results = [], userCoords, language = "en" })
           />
         ))}
 
+        {navPath && (
+          <Polyline
+            path={navPath}
+            options={{
+              strokeColor: "#15803D",
+              strokeOpacity: 0.92,
+              strokeWeight: 5,
+              icons: [{
+                icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 },
+                offset: "0",
+                repeat: "16px",
+              }],
+            }}
+          />
+        )}
+
         {selectedSpot && selectedSpot.coords && (
           <InfoWindow
             position={selectedSpot.coords}
@@ -173,16 +207,17 @@ export function MapView({ services: results = [], userCoords, language = "en" })
               </div>
               {/* Inline styles ensure badge colors render inside Google Maps InfoWindow */}
               <div className="spot-badge-wrap">
-                <span
+                <div
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     fontSize: 11,
                     fontWeight: 700,
-                    borderRadius: 999,
-                    padding: "4px 10px",
+                    borderRadius: 10,
+                    padding: "6px 10px",
                     lineHeight: 1.2,
                     boxShadow: "0 1px 2px rgba(15, 23, 42, 0.08)",
+                    backgroundClip: "padding-box",
                     ...(SPOT_BADGE_STYLES[selectedSpot.category] || {
                       backgroundColor: "#F3F4F6",
                       color: "#374151",
@@ -191,7 +226,7 @@ export function MapView({ services: results = [], userCoords, language = "en" })
                   }}
                 >
                   {spotLabels[selectedSpot.category] || selectedSpot.category}
-                </span>
+                </div>
               </div>
               {selectedSpot.note && (
                 <p className="spot-note">{selectedSpot.note}</p>
