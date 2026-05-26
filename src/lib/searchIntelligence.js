@@ -1,4 +1,17 @@
-const searchLog = [];
+const STORAGE_KEY = "sq_search_log";
+const searchLog = loadSearchLog();
+
+function loadSearchLog() {
+  try {
+    return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function persistSearchLog() {
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(searchLog));
+}
 
 export function logSearch({ query, resultsCount, serviceTypes }) {
   searchLog.push({
@@ -8,6 +21,7 @@ export function logSearch({ query, resultsCount, serviceTypes }) {
     serviceTypes: serviceTypes || [],
     hadGoodMatch: resultsCount >= 2
   });
+  persistSearchLog();
 }
 
 export function getIntelligenceSummary() {
@@ -36,4 +50,5 @@ export function getIntelligenceSummary() {
 
 export function clearSearchLog() {
   searchLog.length = 0;
+  persistSearchLog();
 }

@@ -7,14 +7,34 @@ import { IntelligenceDashboard } from "./IntelligenceDashboard";
 import { useGeolocation } from "../hooks/useGeolocation";
 import { t } from "../lib/i18n";
 
+const OUTREACH_STATE_KEY = "sq_outreach_state";
+
+function loadOutreachState() {
+  try {
+    return JSON.parse(sessionStorage.getItem(OUTREACH_STATE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
 export function OutreachMode({ language }) {
-  const [activeTab, setActiveTab] = useState("search");
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
+  const savedState = loadOutreachState();
+  const [activeTab, setActiveTab] = useState(savedState.activeTab || "search");
+  const [query, setQuery] = useState(savedState.query || "");
+  const [results, setResults] = useState(savedState.results || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { coords } = useGeolocation();
   const L = t(language);
+
+  const persistState = (next) => {
+    sessionStorage.setItem(OUTREACH_STATE_KEY, JSON.stringify({
+      activeTab,
+      query,
+      results,
+      ...next,
+    }));
+  };
 
   const handleSearch = async () => {
     if (!query.trim() || loading) return;
@@ -24,6 +44,7 @@ export function OutreachMode({ language }) {
       const response = await runOutreachLookup(query, language);
       const enriched = enrichResults(response.data.matches, response.data.reasons, coords);
       setResults(enriched);
+      persistState({ query, results: enriched });
       logSearch({
         query,
         resultsCount: enriched.length,
@@ -32,6 +53,7 @@ export function OutreachMode({ language }) {
     } catch {
       setError(L.outreachError);
       setResults([]);
+      persistState({ query, results: [] });
     }
     setLoading(false);
   };
@@ -44,14 +66,20 @@ export function OutreachMode({ language }) {
         <button
           className={`outreach-tab${activeTab === "search" ? " active" : ""}`}
           data-tab="search"
-          onClick={() => setActiveTab("search")}
+          onClick={() => {
+            setActiveTab("search");
+            persistState({ activeTab: "search" });
+          }}
         >
           Search
         </button>
         <button
           className={`outreach-tab${activeTab === "intelligence" ? " active" : ""}`}
           data-tab="intelligence"
-          onClick={() => setActiveTab("intelligence")}
+          onClick={() => {
+            setActiveTab("intelligence");
+            persistState({ activeTab: "intelligence" });
+          }}
         >
           Intelligence
         </button>
@@ -62,7 +90,11 @@ export function OutreachMode({ language }) {
           <div className="outreach-form">
             <input
               value={query}
-              onChange={e => setQuery(e.target.value)}
+              onChange={e => {
+                const nextQuery = e.target.value;
+                setQuery(nextQuery);
+                persistState({ query: nextQuery });
+              }}
               onKeyDown={e => e.key === "Enter" && handleSearch()}
               placeholder={L.outreachPlaceholder}
               className="outreach-input"
