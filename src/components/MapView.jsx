@@ -20,10 +20,10 @@ const TYPE_COLORS = {
 };
 
 const SPOT_BADGE_STYLES = {
-  library: { backgroundColor: "#DBEAFE", color: "#1D4ED8", border: "1px solid #93C5FD" },
-  cooling: { backgroundColor: "#D1FAE5", color: "#065F46", border: "1px solid #6EE7B7" },
-  "24hr": { backgroundColor: "#FEF3C7", color: "#92400E", border: "1px solid #FCD34D" },
-  transit: { backgroundColor: "#F3F4F6", color: "#374151", border: "1px solid #D1D5DB" },
+  library: { backgroundColor: "transparent", color: "#1D4ED8", border: "none" },
+  cooling: { backgroundColor: "transparent", color: "#065F46", border: "none" },
+  "24hr": { backgroundColor: "transparent", color: "#92400E", border: "none" },
+  transit: { backgroundColor: "transparent", color: "#374151", border: "none" },
 };
 
 function getDirectionsUrl(coords, address) {
