@@ -31,13 +31,6 @@ const TYPE_COLORS = {
   default: "#6B7280",
 };
 
-const SPOT_LABEL_STYLES = {
-  library: { color: "#1D4ED8" },
-  cooling: { color: "#065F46" },
-  "24hr": { color: "#92400E" },
-  transit: { color: "#374151" },
-};
-
 function getDirectionsUrl(coords, address) {
   const dest = encodeURIComponent(address || `${coords.lat},${coords.lng}`);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -502,23 +495,22 @@ export function MapView({
                   {selectedSpot.hours}
                 </span>
               </div>
-              <span
+              <p
                 style={{
-                  background: "none",
-                  backgroundColor: "transparent",
-                  border: "0",
-                  boxShadow: "none",
-                  padding: 0,
                   marginTop: 8,
-                  display: "inline",
+                  marginBottom: 0,
                   fontSize: 11,
                   fontWeight: 700,
                   lineHeight: 1.2,
-                  ...(SPOT_LABEL_STYLES[selectedSpot.category] || { color: "#374151" }),
+                  color:
+                    selectedSpot.category === "library" ? "#1D4ED8"
+                    : selectedSpot.category === "cooling" ? "#065F46"
+                    : selectedSpot.category === "24hr" ? "#92400E"
+                    : "#374151",
                 }}
               >
                 {spotLabels[selectedSpot.category] || selectedSpot.category}
-              </span>
+              </p>
               {selectedSpot.note && <p className="spot-note">{selectedSpot.note}</p>}
               <div className="map-info-actions">
                 <a href={`tel:${selectedSpot.phone}`} className="map-btn map-btn-call">
