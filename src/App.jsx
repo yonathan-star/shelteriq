@@ -25,6 +25,7 @@ export default function App() {
   const [view, setView] = useState(() => loadSavedResults() ? "results" : "intake");
   const [lastStandardView, setLastStandardView] = useState(() => loadSavedResults() ? "results" : "intake");
   const [results, setResults] = useState(() => loadSavedResults() || []);
+  const [navTarget, setNavTarget] = useState(null);
   const [intakeMeta, setIntakeMeta] = useState(() => {
     try { return JSON.parse(localStorage.getItem("sq_meta") || "{}"); } catch { return {}; }
   });
@@ -109,6 +110,7 @@ export default function App() {
     setResults([]);
     setIntakeMeta({});
     setCrisis(null);
+    setNavTarget(null);
     resetMemory();
     localStorage.removeItem("sq_results");
     localStorage.removeItem("sq_meta");
@@ -126,6 +128,11 @@ export default function App() {
   }
 
   const isOutreach = view === "outreach";
+
+  const handleNavigateToService = (service) => {
+    setNavTarget(service);
+    setStandardView("map");
+  };
 
   return (
     <div className="app-shell">
@@ -202,12 +209,19 @@ export default function App() {
               who={intakeMeta.who}
               onSuggestNext={handleSuggestNext}
               onViewMap={results.length > 0 ? () => setStandardView("map") : undefined}
+              onNavigateService={handleNavigateToService}
             />
           </div>
         )}
         {view === "map" && (
           <div className="tab-content map-panel">
-            <MapView services={results.length > 0 ? results : []} userCoords={coords} language={language} />
+            <MapView
+              services={results.length > 0 ? results : []}
+              userCoords={coords}
+              language={language}
+              navTarget={navTarget}
+              onClearNavTarget={() => setNavTarget(null)}
+            />
           </div>
         )}
         {view === "outreach" && (

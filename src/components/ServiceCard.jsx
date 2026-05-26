@@ -24,7 +24,7 @@ export function SkeletonCard() {
   );
 }
 
-export function ServiceCard({ service, rank, need, who, language = "en" }) {
+export function ServiceCard({ service, rank, need, who, language = "en", onNavigate }) {
   const [script, setScript] = useState(null);
   const [loadingScript, setLoadingScript] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -54,13 +54,8 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
   };
 
   const handleNavigate = () => {
-    if (!service.coords) return;
-    const dest = encodeURIComponent(service.address || `${service.coords.lat},${service.coords.lng}`);
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const url = isIOS
-      ? `maps://maps.apple.com/?daddr=${dest}`
-      : `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+    if (!service.coords || !onNavigate) return;
+    onNavigate(service);
   };
 
   return (

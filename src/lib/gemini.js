@@ -4,6 +4,29 @@ import { services } from "../data/services.js";
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
 const MODEL = "gemini-2.0-flash";
 
+function buildLocalCallScript(service, need, who, language = "en") {
+  const opening = language === "es"
+    ? `Hola, llamo sobre ${need || "refugio"}.`
+    : language === "ht"
+      ? `Bonjou, m ap rele pou ${need || "abri"}.`
+      : `Hi, I'm calling about ${need || "shelter"}.`;
+  const identity = who === "family"
+    ? (language === "es" ? "Estoy con niños y necesito saber si aceptan familias." :
+      language === "ht" ? "Mwen ak timoun epi mwen bezwen konnen si nou aksepte fanmi." :
+      "I'm with children and need to know if you accept families.")
+    : (language === "es" ? "Necesito saber si hay espacio disponible hoy." :
+      language === "ht" ? "Mwen bezwen konnen si gen plas ki disponib jodi a." :
+      "I need to know if you have space available today.");
+  const details = service.walkin
+    ? (language === "es" ? "¿Puedo llegar sin cita y qué debo llevar?" :
+      language === "ht" ? "Èske mwen ka vini san randevou, epi kisa mwen dwe pote?" :
+      "Can I come in without an appointment, and what should I bring?")
+    : (language === "es" ? "¿Debo llamar antes de llegar y qué documentos necesitan?" :
+      language === "ht" ? "Èske mwen dwe rele anvan mwen vini, epi ki dokiman nou bezwen?" :
+      "Do I need to call ahead before coming, and what documents do you need?");
+  return `${opening} ${identity} ${details} ${service.noId ? "" : ""}`.trim();
+}
+
 function getAreaForService(service) {
   if (!service.coords) return "unknown";
   if (service.coords.lat < 26.07) return "south";
@@ -182,6 +205,10 @@ export async function runComplexIntake(situation, language = "en", memorySummary
 
 // Generates a personalized call script for a specific service
 export async function generateCallScript(service, need, who, language = "en") {
+  if (!import.meta.env.VITE_GEMINI_API_KEY) {
+    return buildLocalCallScript(service, need, who, language);
+  }
+
   const model = genAI.getGenerativeModel({
     model: MODEL,
     generationConfig: { maxOutputTokens: 120, temperature: 0.3 }
@@ -203,8 +230,12 @@ Service facts: ${facts}.
 Tell them exactly what to say to get help quickly. Plain language only.
 Respond in ${lang}.`;
 
-  const result = await model.generateContent(prompt);
-  return result.response.text().trim();
+  try {
+    const result = await model.generateContent(prompt);
+    return result.response.text().trim();
+  } catch {
+    return buildLocalCallScript(service, need, who, language);
+  }
 }
 
 // Answers follow-up questions about the matched services
