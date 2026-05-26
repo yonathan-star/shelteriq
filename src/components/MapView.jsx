@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { services as allServices } from "../data/services";
 import { safeSpots, SPOT_COLORS, SPOT_LABELS } from "../data/safeSpots";
 import { t } from "../lib/i18n";
-import { Phone, Clock, MapPin, Navigation, Layers, X } from "lucide-react";
+import { Phone, Clock, MapPin, Navigation, Layers, X, CarFront, LocateFixed, Route } from "lucide-react";
 
 const TYPE_COLORS = {
   shelter: "#1D4ED8",
@@ -96,7 +96,7 @@ export function MapView({
       {
         origin: userCoords,
         destination: navDestination.coords,
-        travelMode: window.google.maps.TravelMode.WALKING,
+        travelMode: window.google.maps.TravelMode.DRIVING,
         provideRouteAlternatives: false,
       },
       (result, status) => {
@@ -115,7 +115,7 @@ export function MapView({
           distance: leg?.distance?.text || "",
           duration: leg?.duration?.text || "",
         });
-        setNavSteps((leg?.steps || []).slice(0, 4).map((step) => step.instructions));
+        setNavSteps((leg?.steps || []).slice(0, 5).map((step) => step.instructions));
         setNavError("");
       }
     );
@@ -140,6 +140,7 @@ export function MapView({
   const center = userCoords || { lat: 26.1224, lng: -80.1534 };
   const resultIds = new Set(results.map((s) => s.id));
   const mappable = allServices.filter((s) => s.coords);
+  const isNavMode = Boolean(navDestination);
 
   if (!isLoaded) return <div className="map-loading">Loading map...</div>;
 
@@ -147,44 +148,84 @@ export function MapView({
 
   return (
     <div className="map-shell">
-      <div className="safe-spots-bar">
-        <button
-          className={`safe-spots-toggle ${showSafeSpots ? "active" : ""}`}
-          onClick={() => setShowSafeSpots((v) => !v)}
-        >
-          <Layers size={14} />
-          <span>{showSafeSpots ? L.safeSpotsOff : L.safeSpotsToggle}</span>
-        </button>
-        {showSafeSpots && <p className="safe-spots-hint">{L.safeSpotsHint}</p>}
-      </div>
+      {!isNavMode && (
+        <div className="safe-spots-bar">
+          <button
+            className={`safe-spots-toggle ${showSafeSpots ? "active" : ""}`}
+            onClick={() => setShowSafeSpots((v) => !v)}
+          >
+            <Layers size={14} />
+            <span>{showSafeSpots ? L.safeSpotsOff : L.safeSpotsToggle}</span>
+          </button>
+          {showSafeSpots && <p className="safe-spots-hint">{L.safeSpotsHint}</p>}
+        </div>
+      )}
 
-      {navDestination && (
-        <div className="nav-bar">
-          <Navigation size={14} className="nav-bar-icon" />
-          <div className="nav-bar-info">
-            <span className="nav-bar-dest">{navDestination.name}</span>
-            {navMeta ? (
-              <span className="nav-bar-meta">{navMeta.duration} · {navMeta.distance} · walking route</span>
-            ) : navError ? (
-              <span className="nav-bar-meta">{navError}</span>
-            ) : (
-              <span className="nav-bar-meta">Calculating route...</span>
-            )}
-            {navSteps.length > 0 && (
+      {isNavMode && (
+        <div className="nav-mode-shell">
+          <div className="nav-mode-top">
+            <div className="nav-mode-title-wrap">
+              <span className="nav-mode-icon">
+                <CarFront size={18} />
+              </span>
+              <div className="nav-mode-copy">
+                <span className="nav-mode-kicker">Navigation Mode</span>
+                <span className="nav-mode-dest">{navDestination.name}</span>
+              </div>
+            </div>
+            <button className="nav-bar-close" onClick={clearNav} title="Exit navigation">
+              <X size={14} />
+            </button>
+          </div>
+
+          <div className="nav-mode-stats">
+            <span className="nav-mode-stat">
+              <Route size={14} />
+              {navMeta ? `${navMeta.distance} route` : "Finding route"}
+            </span>
+            <span className="nav-mode-stat">
+              <Clock size={14} />
+              {navMeta ? navMeta.duration : "Estimating ETA"}
+            </span>
+            <button
+              className="nav-mode-locate"
+              onClick={() => {
+                if (!mapRef.current || !userCoords) return;
+                mapRef.current.panTo(userCoords);
+                mapRef.current.setZoom(14);
+              }}
+            >
+              <LocateFixed size={14} />
+              Recenter
+            </button>
+          </div>
+
+          <div className="nav-mode-body">
+            {navError ? (
+              <div className="nav-mode-error">
+                <p>{navError}</p>
+                <a
+                  href={getDirectionsUrl(navDestination.coords, navDestination.address)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="nav-mode-fallback"
+                >
+                  Open in maps app
+                </a>
+              </div>
+            ) : navSteps.length > 0 ? (
               <div className="nav-step-list">
                 {navSteps.map((step, index) => (
-                  <div
-                    key={index}
-                    className="nav-step-item"
-                    dangerouslySetInnerHTML={{ __html: `${index + 1}. ${step}` }}
-                  />
+                  <div key={index} className="nav-step-card">
+                    <span className="nav-step-num">{index + 1}</span>
+                    <div className="nav-step-item" dangerouslySetInnerHTML={{ __html: step }} />
+                  </div>
                 ))}
               </div>
+            ) : (
+              <div className="nav-mode-loading">Calculating driving directions...</div>
             )}
           </div>
-          <button className="nav-bar-close" onClick={clearNav} title="Clear route">
-            <X size={14} />
-          </button>
         </div>
       )}
 
@@ -192,7 +233,7 @@ export function MapView({
         mapContainerClassName="map-container"
         center={center}
         zoom={11}
-        options={{ disableDefaultUI: false, zoomControl: true }}
+        options={{ disableDefaultUI: isNavMode, zoomControl: !isNavMode }}
         onLoad={(map) => {
           mapRef.current = map;
         }}
@@ -238,7 +279,8 @@ export function MapView({
           );
         })}
 
-        {showSafeSpots &&
+        {!isNavMode &&
+          showSafeSpots &&
           safeSpots.map((spot) => (
             <Marker
               key={spot.id}
@@ -267,7 +309,7 @@ export function MapView({
               polylineOptions: {
                 strokeColor: "#15803D",
                 strokeOpacity: 0.9,
-                strokeWeight: 5,
+                strokeWeight: 6,
               },
             }}
           />
@@ -292,21 +334,8 @@ export function MapView({
                 </span>
               </div>
               <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  borderRadius: 999,
-                  padding: "6px 10px",
-                  marginTop: 8,
-                  lineHeight: 1.2,
-                  ...(SPOT_BADGE_STYLES[selectedSpot.category] || {
-                    backgroundColor: "#F3F4F6",
-                    color: "#374151",
-                    border: "1px solid #D1D5DB",
-                  }),
-                }}
+                className="spot-category-chip"
+                style={SPOT_BADGE_STYLES[selectedSpot.category] || { backgroundColor: "#F3F4F6", color: "#374151", border: "1px solid #D1D5DB" }}
               >
                 {spotLabels[selectedSpot.category] || selectedSpot.category}
               </div>
@@ -377,33 +406,35 @@ export function MapView({
         )}
       </GoogleMap>
 
-      <div className="map-legend">
-        <span className="legend-item">
-          <span className="legend-dot" style={{ background: "#1A7A4A" }} />
-          {L.yourLocation}
-        </span>
-        {[
-          ["shelter", "#1D4ED8"],
-          ["food", "#B45309"],
-          ["mental_health", "#6D28D9"],
-          ["veteran", "#065F46"],
-          ["medical", "#0284C7"],
-          ["youth", "#92400E"],
-          ["legal", "#6B7280"],
-        ].map(([type, color]) => (
-          <span key={type} className="legend-item">
-            <span className="legend-dot" style={{ background: color }} />
-            {L.typeBadge[type]}
+      {!isNavMode && (
+        <div className="map-legend">
+          <span className="legend-item">
+            <span className="legend-dot" style={{ background: "#1A7A4A" }} />
+            {L.yourLocation}
           </span>
-        ))}
-        {showSafeSpots &&
-          Object.entries(SPOT_COLORS).map(([cat, color]) => (
-            <span key={cat} className="legend-item">
-              <span className="legend-dot legend-dot-square" style={{ background: color }} />
-              {spotLabels[cat]}
+          {[
+            ["shelter", "#1D4ED8"],
+            ["food", "#B45309"],
+            ["mental_health", "#6D28D9"],
+            ["veteran", "#065F46"],
+            ["medical", "#0284C7"],
+            ["youth", "#92400E"],
+            ["legal", "#6B7280"],
+          ].map(([type, color]) => (
+            <span key={type} className="legend-item">
+              <span className="legend-dot" style={{ background: color }} />
+              {L.typeBadge[type]}
             </span>
           ))}
-      </div>
+          {showSafeSpots &&
+            Object.entries(SPOT_COLORS).map(([cat, color]) => (
+              <span key={cat} className="legend-item">
+                <span className="legend-dot legend-dot-square" style={{ background: color }} />
+                {spotLabels[cat]}
+              </span>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
