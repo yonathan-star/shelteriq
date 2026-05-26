@@ -232,15 +232,20 @@ async function main() {
     const outreachInput = page.locator(".outreach-input");
     if (await outreachInput.isVisible()) {
       await humanType(outreachInput, "Veteran male substance abuse no ID", 50);
-      await sleep(500);
+      await sleep(600);
       await safeTap(page.locator(".btn-outreach-search"));
-      // Wait for AI results
+      console.log("     waiting for outreach results (up to 15s)...");
+      // Wait up to 15 seconds — the compact prompt is much faster now
       try {
-        await page.locator(".service-card").first().waitFor({ timeout: 10000 });
+        await page.locator(".service-card").first().waitFor({ timeout: 15000 });
+        console.log("     ✓ outreach results loaded");
+        await sleep(500);
+        await smoothScroll(page, 200, 1000);
       } catch {
-        console.log("  (outreach results took too long — moving on)");
+        // If it times out, just show the loading/error state — still demonstrates the feature
+        console.log("     (outreach timed out — showing UI state and moving on)");
       }
-      await sleep(2000);
+      await sleep(2500);
     } else {
       await sleep(4000);
     }
