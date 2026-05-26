@@ -1917,19 +1917,17 @@ header > div:first-child { min-width: 0; }
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  background: var(--white);
-  border: 1.5px solid var(--ink-100);
+  background: transparent;
+  border: 0;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--ink-700);
-  box-shadow: var(--shadow-raised);
+  color: var(--ink-900);
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .safe-spots-toggle.active {
-  background: #EFF6FF;
-  border-color: #93C5FD;
+  background: transparent;
   color: #1D4ED8;
 }
 
