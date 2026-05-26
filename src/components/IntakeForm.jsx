@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Search, ChevronDown, Loader } from "lucide-react";
+import { detectCrisis } from "../lib/crisis";
 
 const LABELS = {
   en: {
@@ -100,7 +101,7 @@ const LABELS = {
   },
 };
 
-export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading }) {
+export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading, onCrisisDetected }) {
   const L = LABELS[language] || LABELS.en;
 
   const [need, setNeed] = useState(() => localStorage.getItem("sq_need") || "");
@@ -204,7 +205,14 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading 
 
           <button
             className="btn-submit"
-            onClick={() => onComplexSubmit(situation)}
+            onClick={() => {
+              const crisis = detectCrisis(situation);
+              if (crisis && onCrisisDetected) {
+                onCrisisDetected(crisis, situation);
+              } else {
+                onComplexSubmit(situation);
+              }
+            }}
             disabled={situation.trim().length < 10 || loading}
           >
             {loading ? <Loader size={16} className="spin" /> : <Search size={16} />}

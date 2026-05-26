@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Clock, MapPin, Phone, Users, Loader, MessageSquare } from "lucide-react";
+import { Clock, MapPin, Phone, Users, Loader, MessageSquare, Navigation } from "lucide-react";
 import { generateCallScript } from "../lib/gemini";
 import { recordRejection, recordContact } from "../lib/triageMemory";
 import { t } from "../lib/i18n";
+import { getCheckinStatus } from "../lib/checkin";
+import { CheckInFlow } from "./CheckInFlow";
 
 export function SkeletonCard() {
   return (
@@ -28,7 +30,11 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
   const [showFeedback, setShowFeedback] = useState(false);
   const [rejected, setRejected] = useState(false);
   const [contacted, setContacted] = useState(false);
+  const [showCheckin, setShowCheckin] = useState(false);
   const L = t(language);
+
+  // Load availability status from crowdsourced check-ins
+  const checkinStatus = getCheckinStatus(service.id);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowFeedback(true), 3000);
@@ -51,12 +57,19 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
     <div className="service-card">
       <div className="service-top">
         <span className={`rank-badge rank-${rank}`}>{rank}</span>
-        <div>
+        <div style={{ flex: 1 }}>
           <h3 className="service-name">{service.name}</h3>
           {service.distance !== null && (
             <p className="service-distance">{L.miles(service.distance)}</p>
           )}
         </div>
+        {checkinStatus && (
+          <span className={`checkin-badge checkin-${checkinStatus.status}`}>
+            {checkinStatus.status === "available" ? L.checkinAvailable
+             : checkinStatus.status === "full" ? L.checkinFull
+             : L.checkinMixed}
+          </span>
+        )}
       </div>
 
       {service.reason && (
@@ -96,6 +109,12 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
         </div>
       )}
 
+      {checkinStatus && (
+        <p className="checkin-meta">
+          {L.checkinReports(checkinStatus.attempts)} · {L.checkinUpdated(checkinStatus.lastUpdated)}
+        </p>
+      )}
+
       <div className="card-actions">
         <a
           href={`tel:${service.phone}`}
@@ -118,6 +137,24 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
           </button>
         )}
       </div>
+
+      {/* "I'm Here" check-in */}
+      {!showCheckin ? (
+        <button
+          className="btn-checkin"
+          onClick={() => setShowCheckin(true)}
+        >
+          <Navigation size={13} />
+          <span>{L.checkinBtn}</span>
+        </button>
+      ) : (
+        <CheckInFlow
+          serviceId={service.id}
+          serviceName={service.name}
+          language={language}
+          onClose={() => setShowCheckin(false)}
+        />
+      )}
 
       {showFeedback && (
         <div className="card-feedback">

@@ -1599,6 +1599,353 @@ header > div:first-child { min-width: 0; }
 
 .spin { animation: spin 0.7s linear infinite; }
 
+/* ─── CRISIS BANNER ──────────────────────────────────────────────────── */
+
+.crisis-banner {
+  padding: 22px 18px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: linear-gradient(160deg, #FFF0F0 0%, #FFFAF9 60%, var(--cream) 100%);
+  min-height: 100%;
+}
+
+.crisis-banner-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.crisis-alert-icon {
+  color: var(--danger);
+  flex-shrink: 0;
+}
+
+.crisis-heading {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--danger);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.crisis-sub {
+  font-size: 14px;
+  color: var(--ink-700);
+  line-height: 1.5;
+  margin-top: -6px;
+}
+
+.crisis-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.crisis-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--white);
+  border: 1.5px solid var(--ink-100);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+  color: var(--ink-900);
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.crisis-card:active {
+  box-shadow: var(--shadow-raised);
+  border-color: var(--ink-300);
+}
+
+.crisis-card.crisis-primary {
+  border-color: #F5C6C6;
+  background: #FFF8F8;
+}
+
+.crisis-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #FEE2E2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--danger);
+  flex-shrink: 0;
+}
+
+.crisis-card.crisis-primary .crisis-card-icon {
+  background: var(--danger);
+  color: var(--white);
+}
+
+.crisis-card-text { flex: 1; min-width: 0; }
+
+.crisis-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-900);
+  margin-bottom: 2px;
+}
+
+.crisis-card-desc {
+  font-size: 12px;
+  color: var(--ink-500);
+  line-height: 1.4;
+}
+
+.crisis-card-phone {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--danger);
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+}
+
+.crisis-card-arrow { color: var(--ink-300); flex-shrink: 0; }
+
+.crisis-also {
+  font-size: 13px;
+  color: var(--ink-500);
+  font-style: italic;
+}
+
+.crisis-dismiss {
+  margin-top: 4px;
+  padding: 14px 20px;
+  border: 1.5px solid var(--ink-100);
+  border-radius: var(--r-md);
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-700);
+  text-align: center;
+  width: 100%;
+  transition: background 0.15s;
+}
+
+.crisis-dismiss:active { background: var(--ink-50); }
+
+/* ─── CHECK-IN ────────────────────────────────────────────────────────── */
+
+.checkin-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  border-radius: 20px;
+  padding: 3px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.checkin-available {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.checkin-full {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.checkin-mixed {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.checkin-meta {
+  font-size: 11px;
+  color: var(--ink-300);
+  margin-top: -4px;
+  margin-bottom: 2px;
+  padding: 0 2px;
+}
+
+.btn-checkin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 16px;
+  border: 1.5px dashed var(--ink-100);
+  border-radius: var(--r-sm);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-500);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.btn-checkin:active {
+  background: var(--green-50);
+  border-color: var(--green-300);
+  color: var(--green-700);
+}
+
+/* Check-in flow */
+.checkin-flow {
+  margin-top: 10px;
+  padding: 14px;
+  background: var(--cream);
+  border: 1.5px solid var(--ink-100);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.checkin-location {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ink-500);
+  font-weight: 500;
+}
+
+.checkin-question {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.checkin-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.checkin-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  transition: opacity 0.15s;
+}
+
+.checkin-btn:active { opacity: 0.8; }
+
+.checkin-yes {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.checkin-no {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.checkin-flow.checkin-done {
+  align-items: center;
+  text-align: center;
+  padding: 18px;
+}
+
+.checkin-done-icon { color: var(--green-600); }
+
+.checkin-done-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.checkin-done-desc {
+  font-size: 12px;
+  color: var(--ink-500);
+  line-height: 1.4;
+}
+
+.checkin-reset {
+  font-size: 12px;
+  color: var(--ink-300);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  padding: 4px;
+}
+
+/* ─── SAFE SPOTS MAP LAYER ───────────────────────────────────────────── */
+
+.safe-spots-bar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+}
+
+.safe-spots-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--white);
+  border: 1.5px solid var(--ink-100);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-700);
+  box-shadow: var(--shadow-raised);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.safe-spots-toggle.active {
+  background: #EFF6FF;
+  border-color: #93C5FD;
+  color: #1D4ED8;
+}
+
+.safe-spots-hint {
+  font-size: 11px;
+  color: var(--ink-700);
+  background: rgba(255,255,255,0.92);
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-card);
+  line-height: 1.4;
+  backdrop-filter: blur(4px);
+}
+
+.spot-category-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 2px 8px;
+  margin-top: 4px;
+}
+
+.cat-library  { background: #DBEAFE; color: #1D4ED8; }
+.cat-cooling  { background: #D1FAE5; color: #065F46; }
+.cat-24hr     { background: #FEF3C7; color: #92400E; }
+.cat-transit  { background: #F3F4F6; color: #374151; }
+
+.spot-note {
+  font-size: 11px;
+  color: var(--ink-500);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.legend-dot-square {
+  border-radius: 3px;
+}
+
 /* ─── DESKTOP SHELL ───────────────────────────────────────────────────── */
 
 @media (min-width: 430px) {
