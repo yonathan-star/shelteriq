@@ -31,7 +31,7 @@ export default function App() {
   });
   const [loading, setLoading] = useState(false);
   const [crisis, setCrisis] = useState(null); // { type, situation }
-  const { coords } = useGeolocation();
+  const { coords, heading, speed, accuracy } = useGeolocation();
 
   const setStandardView = (nextView) => {
     setLastStandardView(nextView);
@@ -218,6 +218,9 @@ export default function App() {
             <MapView
               services={results.length > 0 ? results : []}
               userCoords={coords}
+              userHeading={heading}
+              userSpeed={speed}
+              userAccuracy={accuracy}
               language={language}
               navTarget={navTarget}
               onClearNavTarget={() => setNavTarget(null)}

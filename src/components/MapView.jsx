@@ -1,9 +1,21 @@
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, DirectionsRenderer } from "@react-google-maps/api";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { services as allServices } from "../data/services";
 import { safeSpots, SPOT_COLORS, SPOT_LABELS } from "../data/safeSpots";
 import { t } from "../lib/i18n";
-import { Phone, Clock, MapPin, Navigation, Layers, X, CarFront, LocateFixed, Route } from "lucide-react";
+import { getDistanceMiles } from "../lib/geo";
+import {
+  Phone,
+  Clock,
+  MapPin,
+  Navigation,
+  Layers,
+  X,
+  CarFront,
+  LocateFixed,
+  Route,
+  ArrowUp,
+} from "lucide-react";
 
 const TYPE_COLORS = {
   shelter: "#1D4ED8",
@@ -34,9 +46,61 @@ function getDirectionsUrl(coords, address) {
     : `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
 }
 
+function htmlToText(html) {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function latLngToCoords(latLng) {
+  return { lat: latLng.lat(), lng: latLng.lng() };
+}
+
+function pointToSegmentDistanceMiles(point, start, end) {
+  if (!point || !start || !end) return Infinity;
+  const milesPerLat = 69;
+  const milesPerLng = Math.cos((point.lat * Math.PI) / 180) * 69;
+  const px = point.lng * milesPerLng;
+  const py = point.lat * milesPerLat;
+  const ax = start.lng * milesPerLng;
+  const ay = start.lat * milesPerLat;
+  const bx = end.lng * milesPerLng;
+  const by = end.lat * milesPerLat;
+  const abx = bx - ax;
+  const aby = by - ay;
+  const ab2 = abx * abx + aby * aby;
+  if (ab2 === 0) return Math.hypot(px - ax, py - ay);
+  const t = Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby) / ab2));
+  const cx = ax + abx * t;
+  const cy = ay + aby * t;
+  return Math.hypot(px - cx, py - cy);
+}
+
+function getMinDistanceToPathMiles(point, path) {
+  if (!point || !path || path.length < 2) return Infinity;
+  let min = Infinity;
+  for (let i = 0; i < path.length - 1; i += 1) {
+    min = Math.min(min, pointToSegmentDistanceMiles(point, path[i], path[i + 1]));
+  }
+  return min;
+}
+
+function getCarIcon(googleMaps, heading) {
+  return {
+    path: googleMaps.SymbolPath.FORWARD_CLOSED_ARROW,
+    scale: 6,
+    rotation: heading || 0,
+    fillColor: "#15803D",
+    fillOpacity: 1,
+    strokeColor: "#FFFFFF",
+    strokeWeight: 2,
+  };
+}
+
 export function MapView({
   services: results = [],
   userCoords,
+  userHeading,
+  userSpeed,
+  userAccuracy,
   language = "en",
   navTarget,
   onClearNavTarget,
@@ -49,7 +113,13 @@ export function MapView({
   const [navMeta, setNavMeta] = useState(null);
   const [navSteps, setNavSteps] = useState([]);
   const [navError, setNavError] = useState("");
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [followMode, setFollowMode] = useState(true);
+  const [arrived, setArrived] = useState(false);
+  const [routePath, setRoutePath] = useState([]);
+  const [rerouteNonce, setRerouteNonce] = useState(0);
   const mapRef = useRef(null);
+  const lastRerouteAtRef = useRef(0);
 
   const L = t(language);
   const spotLabels = SPOT_LABELS[language] || SPOT_LABELS.en;
@@ -65,6 +135,8 @@ export function MapView({
       address: navTarget.address,
       coords: navTarget.coords,
     });
+    setFollowMode(true);
+    setArrived(false);
   }, [navTarget]);
 
   useEffect(() => {
@@ -76,10 +148,18 @@ export function MapView({
   }, [isLoaded, navDestination, userCoords]);
 
   useEffect(() => {
+    if (!isLoaded || !mapRef.current || !userCoords || !navDestination || !followMode) return;
+    mapRef.current.panTo(userCoords);
+    mapRef.current.setZoom(17);
+  }, [isLoaded, userCoords, navDestination, followMode]);
+
+  useEffect(() => {
     if (!isLoaded || !userCoords || !navDestination?.coords) {
       setDirections(null);
       setNavMeta(null);
       setNavSteps([]);
+      setRoutePath([]);
+      setActiveStepIndex(0);
       setNavError(navDestination?.coords && !userCoords ? "Turn on location to use in-app navigation." : "");
       return;
     }
@@ -89,6 +169,7 @@ export function MapView({
       setDirections(null);
       setNavMeta(null);
       setNavSteps([]);
+      setRoutePath([]);
       setNavError("Route request timed out.");
     }, 10000);
 
@@ -105,27 +186,64 @@ export function MapView({
           setDirections(null);
           setNavMeta(null);
           setNavSteps([]);
+          setRoutePath([]);
           setNavError(`Route unavailable (${status}).`);
           return;
         }
 
         const leg = result.routes[0]?.legs[0];
+        const steps = (leg?.steps || []).map((step) => ({
+          instructionHtml: step.instructions,
+          instructionText: htmlToText(step.instructions),
+          distanceText: step.distance?.text || "",
+          durationText: step.duration?.text || "",
+          endCoords: latLngToCoords(step.end_location),
+          startCoords: latLngToCoords(step.start_location),
+        }));
+
         setDirections(result);
         setNavMeta({
           distance: leg?.distance?.text || "",
           duration: leg?.duration?.text || "",
         });
-        setNavSteps((leg?.steps || []).slice(0, 5).map((step) => step.instructions));
+        setNavSteps(steps);
+        setRoutePath(result.routes[0]?.overview_path?.map(latLngToCoords) || []);
+        setActiveStepIndex(0);
         setNavError("");
       }
     );
 
     return () => window.clearTimeout(timeout);
-  }, [isLoaded, navDestination, userCoords]);
+  }, [isLoaded, navDestination, rerouteNonce, userCoords]);
+
+  useEffect(() => {
+    if (!userCoords || navSteps.length === 0 || !navDestination?.coords) return;
+
+    const destinationDistance = getDistanceMiles(userCoords, navDestination.coords);
+    setArrived(destinationDistance < 0.05);
+
+    let nextIndex = navSteps.length - 1;
+    for (let i = 0; i < navSteps.length; i += 1) {
+      if (getDistanceMiles(userCoords, navSteps[i].endCoords) > 0.03) {
+        nextIndex = i;
+        break;
+      }
+    }
+    setActiveStepIndex(nextIndex);
+
+    const routeOffset = getMinDistanceToPathMiles(userCoords, routePath);
+    const now = Date.now();
+    if (routeOffset > 0.08 && now - lastRerouteAtRef.current > 8000) {
+      lastRerouteAtRef.current = now;
+      setRerouteNonce((value) => value + 1);
+    }
+  }, [navDestination, navSteps, routePath, userCoords]);
 
   const handleNavigate = (service) => {
     setSelected(null);
     setNavDestination({ name: service.name, address: service.address, coords: service.coords });
+    setFollowMode(true);
+    setArrived(false);
   };
 
   const clearNav = () => {
@@ -134,6 +252,10 @@ export function MapView({
     setNavMeta(null);
     setNavSteps([]);
     setNavError("");
+    setRoutePath([]);
+    setActiveStepIndex(0);
+    setFollowMode(true);
+    setArrived(false);
     onClearNavTarget?.();
   };
 
@@ -141,6 +263,9 @@ export function MapView({
   const resultIds = new Set(results.map((s) => s.id));
   const mappable = allServices.filter((s) => s.coords);
   const isNavMode = Boolean(navDestination);
+  const activeStep = navSteps[activeStepIndex] || null;
+  const remainingSteps = navSteps.slice(activeStepIndex + 1, activeStepIndex + 4);
+  const speedMph = Number.isFinite(userSpeed) ? Math.max(0, userSpeed * 2.23694) : null;
 
   if (!isLoaded) return <div className="map-loading">Loading map...</div>;
 
@@ -185,18 +310,25 @@ export function MapView({
             </span>
             <span className="nav-mode-stat">
               <Clock size={14} />
-              {navMeta ? navMeta.duration : "Estimating ETA"}
+              {arrived ? "Arrived" : navMeta ? navMeta.duration : "Estimating ETA"}
             </span>
+            {speedMph !== null && (
+              <span className="nav-mode-stat">
+                <Navigation size={14} />
+                {`${speedMph.toFixed(0)} mph`}
+              </span>
+            )}
             <button
               className="nav-mode-locate"
               onClick={() => {
                 if (!mapRef.current || !userCoords) return;
+                setFollowMode(true);
                 mapRef.current.panTo(userCoords);
-                mapRef.current.setZoom(14);
+                mapRef.current.setZoom(17);
               }}
             >
               <LocateFixed size={14} />
-              Recenter
+              Follow
             </button>
           </div>
 
@@ -213,15 +345,42 @@ export function MapView({
                   Open in maps app
                 </a>
               </div>
-            ) : navSteps.length > 0 ? (
-              <div className="nav-step-list">
-                {navSteps.map((step, index) => (
-                  <div key={index} className="nav-step-card">
-                    <span className="nav-step-num">{index + 1}</span>
-                    <div className="nav-step-item" dangerouslySetInnerHTML={{ __html: step }} />
-                  </div>
-                ))}
+            ) : arrived ? (
+              <div className="nav-primary-card nav-primary-arrived">
+                <span className="nav-step-label">Arrival</span>
+                <div className="nav-step-main">You have arrived</div>
               </div>
+            ) : activeStep ? (
+              <>
+                <div className="nav-primary-card">
+                  <span className="nav-step-label">Next step</span>
+                  <div className="nav-step-main">
+                    <ArrowUp size={16} />
+                    <span dangerouslySetInnerHTML={{ __html: activeStep.instructionHtml }} />
+                  </div>
+                  <div className="nav-step-sub">
+                    {activeStep.distanceText}
+                    {activeStep.durationText ? ` · ${activeStep.durationText}` : ""}
+                    {userAccuracy ? ` · ±${Math.round(userAccuracy)} ft` : ""}
+                  </div>
+                </div>
+                {remainingSteps.length > 0 && (
+                  <div className="nav-secondary-list">
+                    {remainingSteps.map((step, index) => (
+                      <div key={`${step.instructionText}-${index}`} className="nav-secondary-item">
+                        <span className="nav-secondary-num">{activeStepIndex + index + 2}</span>
+                        <div>
+                          <div className="nav-secondary-text">{step.instructionText}</div>
+                          <div className="nav-secondary-meta">
+                            {step.distanceText}
+                            {step.durationText ? ` · ${step.durationText}` : ""}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             ) : (
               <div className="nav-mode-loading">Calculating driving directions...</div>
             )}
@@ -237,6 +396,12 @@ export function MapView({
         onLoad={(map) => {
           mapRef.current = map;
         }}
+        onDragStart={() => {
+          if (isNavMode) setFollowMode(false);
+        }}
+        onZoomChanged={() => {
+          if (isNavMode) setFollowMode(false);
+        }}
         onClick={() => {
           setSelected(null);
           setSelectedSpot(null);
@@ -247,14 +412,18 @@ export function MapView({
             position={userCoords}
             title={L.yourLocation}
             zIndex={100}
-            icon={{
-              path: circle,
-              scale: 9,
-              fillColor: "#1A7A4A",
-              fillOpacity: 1,
-              strokeColor: "#fff",
-              strokeWeight: 3,
-            }}
+            icon={
+              isNavMode
+                ? getCarIcon(window.google.maps, userHeading)
+                : {
+                    path: circle,
+                    scale: 9,
+                    fillColor: "#1A7A4A",
+                    fillOpacity: 1,
+                    strokeColor: "#fff",
+                    strokeWeight: 3,
+                  }
+            }
           />
         )}
 
@@ -335,7 +504,7 @@ export function MapView({
               </div>
               <div
                 className="spot-category-chip"
-                style={SPOT_BADGE_STYLES[selectedSpot.category] || { backgroundColor: "#F3F4F6", color: "#374151", border: "1px solid #D1D5DB" }}
+                style={SPOT_BADGE_STYLES[selectedSpot.category] || { backgroundColor: "transparent", color: "#374151", border: "none" }}
               >
                 {spotLabels[selectedSpot.category] || selectedSpot.category}
               </div>
