@@ -1918,16 +1918,18 @@ header > div:first-child { min-width: 0; }
   gap: 6px;
   padding: 8px 14px;
   background: transparent;
-  border: 0;
+  border: 1.5px solid rgba(15, 23, 42, 0.14);
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
   color: var(--ink-900);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .safe-spots-toggle.active {
-  background: transparent;
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(29, 78, 216, 0.3);
   color: #1D4ED8;
 }
 
