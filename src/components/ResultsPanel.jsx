@@ -5,7 +5,7 @@ import { MemoryBanner } from "./MemoryBanner";
 import { answerFollowUp } from "../lib/gemini";
 import { t } from "../lib/i18n";
 
-export function ResultsPanel({ results, onReset, language, loading = false, need, who, onSuggestNext, onViewMap }) {
+export function ResultsPanel({ results, onReset, language, loading = false, need, who, onSuggestNext, onViewMap, onNavigateService }) {
   const L = t(language);
   const [question, setQuestion] = useState("");
   const [qaHistory, setQaHistory] = useState(() => {
@@ -79,7 +79,15 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
 
       <div className="results-list">
         {results.map((service, i) => (
-          <ServiceCard key={service.id} service={service} rank={i + 1} need={need} who={who} language={language} />
+          <ServiceCard
+            key={service.id}
+            service={service}
+            rank={i + 1}
+            need={need}
+            who={who}
+            language={language}
+            onNavigate={onNavigateService}
+          />
         ))}
       </div>
 
