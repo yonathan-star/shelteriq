@@ -1,4 +1,4 @@
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, DirectionsRenderer } from "@react-google-maps/api";
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, DirectionsRenderer, OverlayView } from "@react-google-maps/api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { services as allServices } from "../data/services";
 import { safeSpots, SPOT_COLORS, SPOT_LABELS } from "../data/safeSpots";
@@ -478,14 +478,24 @@ export function MapView({
         )}
 
         {selectedSpot && selectedSpot.coords && (
-          <InfoWindow
+          <OverlayView
             position={selectedSpot.coords}
-            onCloseClick={() => setSelectedSpot(null)}
-            options={{ pixelOffset: new window.google.maps.Size(0, -10) }}
+            mapPaneName={OverlayView.FLOAT_PANE}
+            getPixelPositionOffset={(width, height) => ({
+              x: Math.round(-width / 2),
+              y: Math.round(-height - 16),
+            })}
           >
-            <div className="map-info">
-              <p className="map-info-title">{selectedSpot.name}</p>
-              <div className="map-info-meta">
+            <div className="safe-spot-overlay">
+              <button
+                className="safe-spot-overlay-close"
+                onClick={() => setSelectedSpot(null)}
+                aria-label="Close safe waiting spot"
+              >
+                <X size={12} />
+              </button>
+              <p className="safe-spot-overlay-title">{selectedSpot.name}</p>
+              <div className="safe-spot-overlay-meta">
                 <span className="map-info-row">
                   <MapPin size={12} />
                   {selectedSpot.address}
@@ -528,7 +538,7 @@ export function MapView({
                 </a>
               </div>
             </div>
-          </InfoWindow>
+          </OverlayView>
         )}
 
         {selected && selected.coords && (
