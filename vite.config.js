@@ -22,9 +22,10 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ["**/*.{css,html,ico,png}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
         skipWaiting: true,
         clientsClaim: true,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/maps\.googleapis\.com\/.*/i,
