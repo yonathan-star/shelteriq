@@ -7,8 +7,6 @@ export function HomePage({ onUserMode, onOutreachMode }) {
           <span className="home-logo-sub">Broward County</span>
         </div>
 
-        <p className="home-purpose">BIG BOOTY LATINAS</p>
-
         <div className="home-stat-block">
           <div className="home-stat">
             <span className="home-stat-num">2,700</span>
