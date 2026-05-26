@@ -1913,12 +1913,11 @@ header > div:first-child { min-width: 0; }
 .safe-spots-hint {
   font-size: 11px;
   color: var(--ink-700);
-  background: rgba(255,255,255,0.92);
+  background: rgba(255,255,255,0.96);
   padding: 5px 10px;
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-card);
   line-height: 1.4;
-  backdrop-filter: blur(4px);
 }
 
 .spot-category-badge {
@@ -1944,6 +1943,86 @@ header > div:first-child { min-width: 0; }
 
 .legend-dot-square {
   border-radius: 3px;
+}
+
+/* ─── IN-APP NAV BAR ─────────────────────────────────────────────────── */
+
+.nav-bar {
+  position: absolute;
+  top: 56px;
+  left: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--white);
+  border: 1.5px solid var(--green-500);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  box-shadow: var(--shadow-raised);
+}
+
+.nav-bar-icon { color: var(--green-600); flex-shrink: 0; }
+
+.nav-bar-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nav-bar-dest {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-bar-meta {
+  font-size: 11px;
+  color: var(--green-600);
+  font-weight: 600;
+}
+
+.nav-bar-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ink-50, #f8f8f8);
+  border: 1px solid var(--ink-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-500);
+  cursor: pointer;
+}
+
+/* ─── RESULTS VIEW-ON-MAP BUTTON ─────────────────────────────────────── */
+
+.results-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-view-map {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: var(--green-50, #f0fdf4);
+  color: var(--green-700, #15803d);
+  border: 1.5px solid var(--green-200, #bbf7d0);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 /* ─── DESKTOP SHELL ───────────────────────────────────────────────────── */

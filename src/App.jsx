@@ -188,6 +188,7 @@ export default function App() {
               need={intakeMeta.need}
               who={intakeMeta.who}
               onSuggestNext={handleSuggestNext}
+              onViewMap={results.length > 0 ? () => setView("map") : undefined}
             />
           </div>
         )}

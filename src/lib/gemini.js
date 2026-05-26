@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { services } from "../data/services.js";
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-const MODEL = "gemini-3.1-flash-lite";
+const MODEL = "gemini-2.0-flash";
 
 const COMPLEX_PROMPT = (language = "en", memorySummary = null) => `
 You are ShelterIQ, an AI resource navigator for people experiencing homelessness in Broward County, Florida.

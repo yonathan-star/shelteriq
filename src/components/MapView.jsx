@@ -1,9 +1,9 @@
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
-import { useState } from "react";
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, DirectionsRenderer } from "@react-google-maps/api";
+import { useState, useEffect, useRef } from "react";
 import { services as allServices } from "../data/services";
 import { safeSpots, SPOT_COLORS, SPOT_LABELS } from "../data/safeSpots";
 import { t } from "../lib/i18n";
-import { Phone, Clock, MapPin, Navigation, Layers } from "lucide-react";
+import { Phone, Clock, MapPin, Navigation, Layers, X } from "lucide-react";
 
 const TYPE_COLORS = {
   shelter: "#1D4ED8",
@@ -19,6 +19,14 @@ const TYPE_COLORS = {
   default: "#6B7280",
 };
 
+// Inline styles for category badges — avoids CSS class scoping issues inside Google Maps InfoWindow
+const SPOT_BADGE_STYLES = {
+  library:  { background: "#DBEAFE", color: "#1D4ED8" },
+  cooling:  { background: "#D1FAE5", color: "#065F46" },
+  "24hr":   { background: "#FEF3C7", color: "#92400E" },
+  transit:  { background: "#F3F4F6", color: "#374151" },
+};
+
 function getDirectionsUrl(coords, address) {
   const dest = encodeURIComponent(address || `${coords.lat},${coords.lng}`);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -31,12 +39,62 @@ export function MapView({ services: results = [], userCoords, language = "en" })
   const [selected, setSelected] = useState(null);
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [showSafeSpots, setShowSafeSpots] = useState(false);
+  const [navDestination, setNavDestination] = useState(null); // { name, address, coords }
+  const [directions, setDirections] = useState(null);
+  const [navInfo, setNavInfo] = useState(null); // { duration, distance }
+  const prevNavKey = useRef(null);
+
   const L = t(language);
   const spotLabels = SPOT_LABELS[language] || SPOT_LABELS.en;
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
   });
+
+  // Fetch walking directions when nav destination is set
+  useEffect(() => {
+    if (!navDestination || !userCoords || !isLoaded) {
+      setDirections(null);
+      setNavInfo(null);
+      prevNavKey.current = null;
+      return;
+    }
+    const key = `${navDestination.coords.lat},${navDestination.coords.lng}`;
+    if (prevNavKey.current === key) return;
+    prevNavKey.current = key;
+
+    const svc = new window.google.maps.DirectionsService();
+    svc.route(
+      {
+        origin: userCoords,
+        destination: navDestination.coords,
+        travelMode: window.google.maps.TravelMode.WALKING,
+      },
+      (result, status) => {
+        if (status === "OK") {
+          setDirections(result);
+          const leg = result.routes[0]?.legs[0];
+          setNavInfo({ duration: leg?.duration?.text, distance: leg?.distance?.text });
+        }
+      }
+    );
+  }, [navDestination, userCoords, isLoaded]);
+
+  const handleNavigate = (service) => {
+    setSelected(null);
+    if (userCoords) {
+      setNavDestination({ name: service.name, address: service.address, coords: service.coords });
+    } else {
+      window.open(getDirectionsUrl(service.coords, service.address), "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const clearNav = () => {
+    setNavDestination(null);
+    setDirections(null);
+    setNavInfo(null);
+    prevNavKey.current = null;
+  };
 
   const center = userCoords || { lat: 26.1224, lng: -80.1534 };
   const resultIds = new Set(results.map(s => s.id));
@@ -61,6 +119,25 @@ export function MapView({ services: results = [], userCoords, language = "en" })
           <p className="safe-spots-hint">{L.safeSpotsHint}</p>
         )}
       </div>
+
+      {/* In-app navigation banner */}
+      {navDestination && (
+        <div className="nav-bar">
+          <Navigation size={14} className="nav-bar-icon" />
+          <div className="nav-bar-info">
+            <span className="nav-bar-dest">{navDestination.name}</span>
+            {navInfo && (
+              <span className="nav-bar-meta">
+                {navInfo.duration} · {navInfo.distance} walking
+              </span>
+            )}
+            {!navInfo && <span className="nav-bar-meta">Calculating route…</span>}
+          </div>
+          <button className="nav-bar-close" onClick={clearNav} title="Clear route">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       <GoogleMap
         mapContainerClassName="map-container"
@@ -92,7 +169,7 @@ export function MapView({ services: results = [], userCoords, language = "en" })
                 scale: isResult ? 9 : 6,
                 fillColor: color,
                 fillOpacity: isResult ? 1 : 0.55,
-                strokeColor: isResult ? "#fff" : "#fff",
+                strokeColor: "#fff",
                 strokeWeight: isResult ? 2.5 : 1.5,
               }}
             />
@@ -117,6 +194,21 @@ export function MapView({ services: results = [], userCoords, language = "en" })
           />
         ))}
 
+        {/* Walking route */}
+        {directions && (
+          <DirectionsRenderer
+            directions={directions}
+            options={{
+              suppressMarkers: true,
+              polylineOptions: {
+                strokeColor: "#1A7A4A",
+                strokeOpacity: 0.85,
+                strokeWeight: 5,
+              },
+            }}
+          />
+        )}
+
         {selectedSpot && selectedSpot.coords && (
           <InfoWindow
             position={selectedSpot.coords}
@@ -129,7 +221,11 @@ export function MapView({ services: results = [], userCoords, language = "en" })
                 <span className="map-info-row"><MapPin size={12} />{selectedSpot.address}</span>
                 <span className="map-info-row"><Clock size={12} />{selectedSpot.hours}</span>
               </div>
-              <span className={`spot-category-badge cat-${selectedSpot.category}`}>
+              {/* Inline styles ensure badge colors render inside Google Maps InfoWindow */}
+              <span
+                className="spot-category-badge"
+                style={SPOT_BADGE_STYLES[selectedSpot.category] || { background: "#F3F4F6", color: "#374151" }}
+              >
                 {spotLabels[selectedSpot.category] || selectedSpot.category}
               </span>
               {selectedSpot.note && (
@@ -191,15 +287,13 @@ export function MapView({ services: results = [], userCoords, language = "en" })
                   <Phone size={13} />
                   {selected.phone}
                 </a>
-                <a
-                  href={getDirectionsUrl(selected.coords, selected.address)}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
                   className="map-btn map-btn-dir"
+                  onClick={() => handleNavigate(selected)}
                 >
                   <Navigation size={13} />
-                  {language === "es" ? "Cómo llegar" : language === "ht" ? "Direksyon" : "Directions"}
-                </a>
+                  {language === "es" ? "Navegar" : language === "ht" ? "Direksyon" : "Navigate"}
+                </button>
               </div>
             </div>
           </InfoWindow>
