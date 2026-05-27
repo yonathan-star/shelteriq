@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { runOutreachLookup } from "../lib/gemini";
-import { enrichResults } from "../lib/matching";
+import { enrichResults, keywordSearch } from "../lib/matching";
 import { logSearch } from "../lib/searchIntelligence";
 import { ServiceCard, SkeletonCard } from "./ServiceCard";
 import { IntelligenceDashboard } from "./IntelligenceDashboard";
@@ -29,9 +29,16 @@ export function OutreachMode({ language }) {
         resultsCount: enriched.length,
         serviceTypes: enriched.flatMap(s => s.type)
       });
-    } catch {
-      setError(L.outreachError);
-      setResults([]);
+    } catch (err) {
+      console.warn("Outreach AI search failed, using keyword fallback:", err);
+      const fallbackResults = keywordSearch(query, coords);
+      setResults(fallbackResults);
+      logSearch({
+        query,
+        resultsCount: fallbackResults.length,
+        serviceTypes: fallbackResults.flatMap(s => s.type)
+      });
+      if (fallbackResults.length === 0) setError(L.outreachError);
     }
     setLoading(false);
   };

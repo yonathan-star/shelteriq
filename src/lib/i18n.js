@@ -45,6 +45,7 @@ export const T = {
     checkinReports: n => `${n} reports`,
     // safe spots
     safeSpotsToggle: "Safe Waiting Spots",
+    safeSpotsShort: "Safe spots",
     safeSpotsOff: "Hide spots",
     safeSpotsHint: "Libraries, cooling centers & 24-hr locations open now",
   },
@@ -92,6 +93,7 @@ export const T = {
     checkinUpdated: n => `Actualizado ${n}`,
     checkinReports: n => `${n} reportes`,
     safeSpotsToggle: "Lugares seguros para esperar",
+    safeSpotsShort: "Lugares seguros",
     safeSpotsOff: "Ocultar lugares",
     safeSpotsHint: "Bibliotecas, centros de enfriamiento y lugares 24 hrs",
   },
@@ -139,6 +141,7 @@ export const T = {
     checkinUpdated: n => `Mete ajou ${n}`,
     checkinReports: n => `${n} rapò`,
     safeSpotsToggle: "Kote ki an sekirite pou tann",
+    safeSpotsShort: "Kote sekirite",
     safeSpotsOff: "Kache kote yo",
     safeSpotsHint: "Bibliyotèk, sant refwadisman ak kote 24 è",
   },

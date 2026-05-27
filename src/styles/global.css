@@ -1886,22 +1886,36 @@ header > div:first-child { min-width: 0; }
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-width: calc(100% - 24px);
+  width: min(188px, calc(100% - 76px));
 }
 
 .safe-spots-toggle {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 8px 14px;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
   background: var(--white);
   border: 1.5px solid var(--ink-100);
-  border-radius: 20px;
+  border-radius: var(--r-sm);
   font-size: 13px;
   font-weight: 600;
   color: var(--ink-700);
   box-shadow: var(--shadow-raised);
   transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.safe-spots-toggle svg {
+  flex: 0 0 auto;
+}
+
+.safe-spots-toggle span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .safe-spots-toggle.active {
@@ -1914,11 +1928,13 @@ header > div:first-child { min-width: 0; }
   font-size: 11px;
   color: var(--ink-700);
   background: rgba(255,255,255,0.92);
-  padding: 5px 10px;
+  padding: 6px 8px;
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-card);
-  line-height: 1.4;
+  line-height: 1.25;
   backdrop-filter: blur(4px);
+  margin: 0;
+  max-width: 100%;
 }
 
 .spot-category-badge {

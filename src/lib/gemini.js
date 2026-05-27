@@ -45,9 +45,11 @@ CRITICAL RULES:
 AVAILABLE SERVICES (compact — use id to match):
 ${JSON.stringify(services.map(s => ({
   id: s.id, name: s.name, type: s.type, walkin: s.walkin,
-  gender: s.eligibility.gender, families: s.eligibility.families,
-  youth: s.eligibility.youth, noId: s.eligibility.noId,
-  pets: s.eligibility.pets, veteran: s.eligibility.veteran,
+  gender: s.eligibility.men && s.eligibility.women ? "any" : s.eligibility.men ? "men" : s.eligibility.women ? "women" : "unknown",
+  families: s.eligibility.families,
+  youth: s.eligibility.maxAge !== null && s.eligibility.maxAge <= 24,
+  noId: s.eligibility.noId,
+  pets: s.eligibility.pets, veteran: s.eligibility.veterans,
   area: s.coords ? (s.coords.lat < 26.07 ? "south" : s.coords.lat > 26.20 ? "north" : "central") : "any",
 })))}
 `;
@@ -148,12 +150,12 @@ export async function runOutreachLookup(query, language = "en") {
       ? (s.coords.lat < 26.07 ? "south" : s.coords.lat > 26.20 ? "north" : "central")
       : "unknown",
     walkin: s.walkin,
-    gender: s.eligibility.gender,
+    gender: s.eligibility.men && s.eligibility.women ? "any" : s.eligibility.men ? "men" : s.eligibility.women ? "women" : "unknown",
     families: s.eligibility.families,
-    youth: s.eligibility.youth,
+    youth: s.eligibility.maxAge !== null && s.eligibility.maxAge <= 24,
     noId: s.eligibility.noId,
     pets: s.eligibility.pets,
-    veteran: s.eligibility.veteran,
+    veteran: s.eligibility.veterans,
   }));
 
   const prompt = `You are ShelterIQ, a Broward County homeless service lookup tool for outreach workers.
