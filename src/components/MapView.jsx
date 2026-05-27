@@ -367,6 +367,219 @@ export function MapView({
         </button>
       )}
 
+      <div className="map-area">
+        <GoogleMap
+          mapContainerClassName="map-container"
+          center={center}
+          zoom={11}
+          options={{
+            disableDefaultUI: isNavMode,
+            zoomControl: !isNavMode,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false,
+          }}
+          onLoad={(map) => {
+            mapRef.current = map;
+          }}
+          onDragStart={() => {
+            if (isNavMode) setFollowMode(false);
+          }}
+          onZoomChanged={() => {
+            if (isNavMode) setFollowMode(false);
+          }}
+          onClick={() => {
+            setSelected(null);
+            setSelectedSpot(null);
+          }}
+        >
+          {userCoords && (
+            <Marker
+              position={userCoords}
+              title={L.yourLocation}
+              zIndex={100}
+              icon={
+                isNavMode
+                  ? getCarIcon(window.google.maps, userHeading)
+                  : {
+                      path: circle,
+                      scale: 9,
+                      fillColor: "#1A7A4A",
+                      fillOpacity: 1,
+                      strokeColor: "#fff",
+                      strokeWeight: 3,
+                    }
+              }
+            />
+          )}
+
+          {mappable.map((service) => {
+            const isResult = resultIds.has(service.id);
+            const color = TYPE_COLORS[service.type[0]] || TYPE_COLORS.default;
+            return (
+              <Marker
+                key={service.id}
+                position={service.coords}
+                zIndex={isResult ? 10 : 1}
+                onClick={() => setSelected(service)}
+                icon={{
+                  path: circle,
+                  scale: isResult ? 9 : 6,
+                  fillColor: color,
+                  fillOpacity: isResult ? 1 : 0.55,
+                  strokeColor: "#fff",
+                  strokeWeight: isResult ? 2.5 : 1.5,
+                }}
+              />
+            );
+          })}
+
+          {!isNavMode &&
+            showSafeSpots &&
+            safeSpots.map((spot) => (
+              <Marker
+                key={spot.id}
+                position={spot.coords}
+                zIndex={5}
+                onClick={() => {
+                  setSelectedSpot(spot);
+                  setSelected(null);
+                }}
+                icon={{
+                  path: circle,
+                  scale: 8,
+                  fillColor: SPOT_COLORS[spot.category] || "#6B7280",
+                  fillOpacity: 0.9,
+                  strokeColor: "#fff",
+                  strokeWeight: 2,
+                }}
+              />
+            ))}
+
+          {directions && (
+            <DirectionsRenderer
+              directions={directions}
+              options={{
+                suppressMarkers: true,
+                polylineOptions: {
+                  strokeColor: "#15803D",
+                  strokeOpacity: 0.9,
+                  strokeWeight: 6,
+                },
+              }}
+            />
+          )}
+
+          {selectedSpot && selectedSpot.coords && (
+            <OverlayView
+              position={selectedSpot.coords}
+              mapPaneName={OverlayView.FLOAT_PANE}
+              getPixelPositionOffset={(width, height) => ({
+                x: Math.round(-width / 2),
+                y: Math.round(-height - 16),
+              })}
+            >
+              <div className="safe-spot-overlay">
+                <button
+                  className="safe-spot-overlay-close"
+                  onClick={() => setSelectedSpot(null)}
+                  aria-label="Close safe waiting spot"
+                >
+                  <X size={12} />
+                </button>
+                <p className="safe-spot-overlay-title">{selectedSpot.name}</p>
+                <div className="safe-spot-overlay-meta">
+                  <span className="map-info-row">
+                    <MapPin size={12} />
+                    {selectedSpot.address}
+                  </span>
+                  <span className="map-info-row">
+                    <Clock size={12} />
+                    {selectedSpot.hours}
+                  </span>
+                </div>
+                <p
+                  style={{
+                    marginTop: 8,
+                    marginBottom: 0,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    lineHeight: 1.2,
+                    color:
+                      selectedSpot.category === "library" ? "#1D4ED8"
+                      : selectedSpot.category === "cooling" ? "#065F46"
+                      : selectedSpot.category === "24hr" ? "#92400E"
+                      : "#374151",
+                  }}
+                >
+                  {spotLabels[selectedSpot.category] || selectedSpot.category}
+                </p>
+                {selectedSpot.note && <p className="spot-note">{selectedSpot.note}</p>}
+                <div className="map-info-actions">
+                  <a href={`tel:${selectedSpot.phone}`} className="map-btn map-btn-call">
+                    <Phone size={13} />
+                    {selectedSpot.phone.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")}
+                  </a>
+                  <button
+                    className="map-btn map-btn-dir"
+                    onClick={() => handleNavigateToSafeSpot(selectedSpot)}
+                  >
+                    <Navigation size={13} />
+                    {language === "es" ? "Navegar" : language === "ht" ? "Direksyon" : "Navigate"}
+                  </button>
+                </div>
+              </div>
+            </OverlayView>
+          )}
+
+          {selected && selected.coords && (
+            <InfoWindow
+              position={selected.coords}
+              onCloseClick={() => setSelected(null)}
+              options={{ pixelOffset: new window.google.maps.Size(0, -10) }}
+            >
+              <div className="map-info">
+                <p className="map-info-title">{selected.name}</p>
+
+                <div className="map-info-meta">
+                  <span className="map-info-row">
+                    <MapPin size={12} />
+                    {selected.address}
+                  </span>
+                  <span className="map-info-row">
+                    <Clock size={12} />
+                    {selected.hours}
+                  </span>
+                  <span className="map-info-row">
+                    <Phone size={12} />
+                    {selected.walkin ? L.walkin : L.callAhead}
+                  </span>
+                </div>
+
+                <div className="map-info-badges">
+                  {selected.type.map((type) => (
+                    <span key={type} className={`type-badge type-${type}`} style={{ fontSize: 10 }}>
+                      {L.typeBadge[type] || type}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="map-info-actions">
+                  <a href={`tel:${selected.phone}`} className="map-btn map-btn-call">
+                    <Phone size={13} />
+                    {selected.phone}
+                  </a>
+                  <button className="map-btn map-btn-dir" onClick={() => handleNavigate(selected)}>
+                    <Navigation size={13} />
+                    {language === "es" ? "Navegar" : language === "ht" ? "Direksyon" : "Navigate"}
+                  </button>
+                </div>
+              </div>
+            </InfoWindow>
+          )}
+        </GoogleMap>
+      </div>
+
       {isNavMode && (
         <div className={`nav-mode-shell${navPanelOpen ? " expanded" : ""}`}>
           <div className="nav-mode-top">
@@ -506,217 +719,6 @@ export function MapView({
           </div>
         </div>
       )}
-
-      <GoogleMap
-        mapContainerClassName="map-container"
-        center={center}
-        zoom={11}
-        options={{
-          disableDefaultUI: isNavMode,
-          zoomControl: !isNavMode,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false,
-        }}
-        onLoad={(map) => {
-          mapRef.current = map;
-        }}
-        onDragStart={() => {
-          if (isNavMode) setFollowMode(false);
-        }}
-        onZoomChanged={() => {
-          if (isNavMode) setFollowMode(false);
-        }}
-        onClick={() => {
-          setSelected(null);
-          setSelectedSpot(null);
-        }}
-      >
-        {userCoords && (
-          <Marker
-            position={userCoords}
-            title={L.yourLocation}
-            zIndex={100}
-            icon={
-              isNavMode
-                ? getCarIcon(window.google.maps, userHeading)
-                : {
-                    path: circle,
-                    scale: 9,
-                    fillColor: "#1A7A4A",
-                    fillOpacity: 1,
-                    strokeColor: "#fff",
-                    strokeWeight: 3,
-                  }
-            }
-          />
-        )}
-
-        {mappable.map((service) => {
-          const isResult = resultIds.has(service.id);
-          const color = TYPE_COLORS[service.type[0]] || TYPE_COLORS.default;
-          return (
-            <Marker
-              key={service.id}
-              position={service.coords}
-              zIndex={isResult ? 10 : 1}
-              onClick={() => setSelected(service)}
-              icon={{
-                path: circle,
-                scale: isResult ? 9 : 6,
-                fillColor: color,
-                fillOpacity: isResult ? 1 : 0.55,
-                strokeColor: "#fff",
-                strokeWeight: isResult ? 2.5 : 1.5,
-              }}
-            />
-          );
-        })}
-
-        {!isNavMode &&
-          showSafeSpots &&
-          safeSpots.map((spot) => (
-            <Marker
-              key={spot.id}
-              position={spot.coords}
-              zIndex={5}
-              onClick={() => {
-                setSelectedSpot(spot);
-                setSelected(null);
-              }}
-              icon={{
-                path: circle,
-                scale: 8,
-                fillColor: SPOT_COLORS[spot.category] || "#6B7280",
-                fillOpacity: 0.9,
-                strokeColor: "#fff",
-                strokeWeight: 2,
-              }}
-            />
-          ))}
-
-        {directions && (
-          <DirectionsRenderer
-            directions={directions}
-            options={{
-              suppressMarkers: true,
-              polylineOptions: {
-                strokeColor: "#15803D",
-                strokeOpacity: 0.9,
-                strokeWeight: 6,
-              },
-            }}
-          />
-        )}
-
-        {selectedSpot && selectedSpot.coords && (
-          <OverlayView
-            position={selectedSpot.coords}
-            mapPaneName={OverlayView.FLOAT_PANE}
-            getPixelPositionOffset={(width, height) => ({
-              x: Math.round(-width / 2),
-              y: Math.round(-height - 16),
-            })}
-          >
-            <div className="safe-spot-overlay">
-              <button
-                className="safe-spot-overlay-close"
-                onClick={() => setSelectedSpot(null)}
-                aria-label="Close safe waiting spot"
-              >
-                <X size={12} />
-              </button>
-              <p className="safe-spot-overlay-title">{selectedSpot.name}</p>
-              <div className="safe-spot-overlay-meta">
-                <span className="map-info-row">
-                  <MapPin size={12} />
-                  {selectedSpot.address}
-                </span>
-                <span className="map-info-row">
-                  <Clock size={12} />
-                  {selectedSpot.hours}
-                </span>
-              </div>
-              <p
-                style={{
-                  marginTop: 8,
-                  marginBottom: 0,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  lineHeight: 1.2,
-                  color:
-                    selectedSpot.category === "library" ? "#1D4ED8"
-                    : selectedSpot.category === "cooling" ? "#065F46"
-                    : selectedSpot.category === "24hr" ? "#92400E"
-                    : "#374151",
-                }}
-              >
-                {spotLabels[selectedSpot.category] || selectedSpot.category}
-              </p>
-              {selectedSpot.note && <p className="spot-note">{selectedSpot.note}</p>}
-              <div className="map-info-actions">
-                <a href={`tel:${selectedSpot.phone}`} className="map-btn map-btn-call">
-                  <Phone size={13} />
-                  {selectedSpot.phone.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")}
-                </a>
-                <button
-                  className="map-btn map-btn-dir"
-                  onClick={() => handleNavigateToSafeSpot(selectedSpot)}
-                >
-                  <Navigation size={13} />
-                  {language === "es" ? "Navegar" : language === "ht" ? "Direksyon" : "Navigate"}
-                </button>
-              </div>
-            </div>
-          </OverlayView>
-        )}
-
-        {selected && selected.coords && (
-          <InfoWindow
-            position={selected.coords}
-            onCloseClick={() => setSelected(null)}
-            options={{ pixelOffset: new window.google.maps.Size(0, -10) }}
-          >
-            <div className="map-info">
-              <p className="map-info-title">{selected.name}</p>
-
-              <div className="map-info-meta">
-                <span className="map-info-row">
-                  <MapPin size={12} />
-                  {selected.address}
-                </span>
-                <span className="map-info-row">
-                  <Clock size={12} />
-                  {selected.hours}
-                </span>
-                <span className="map-info-row">
-                  <Phone size={12} />
-                  {selected.walkin ? L.walkin : L.callAhead}
-                </span>
-              </div>
-
-              <div className="map-info-badges">
-                {selected.type.map((type) => (
-                  <span key={type} className={`type-badge type-${type}`} style={{ fontSize: 10 }}>
-                    {L.typeBadge[type] || type}
-                  </span>
-                ))}
-              </div>
-
-              <div className="map-info-actions">
-                <a href={`tel:${selected.phone}`} className="map-btn map-btn-call">
-                  <Phone size={13} />
-                  {selected.phone}
-                </a>
-                <button className="map-btn map-btn-dir" onClick={() => handleNavigate(selected)}>
-                  <Navigation size={13} />
-                  {language === "es" ? "Navegar" : language === "ht" ? "Direksyon" : "Navigate"}
-                </button>
-              </div>
-            </div>
-          </InfoWindow>
-        )}
-      </GoogleMap>
 
       {!isNavMode && (
         <div className="map-legend">
