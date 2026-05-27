@@ -176,7 +176,6 @@ export default function App() {
       <header>
         <div>
           <span className="logo">ShelterIQ</span>
-          <span className="logo-sub">Broward County</span>
         </div>
         <div className="header-actions">
           <LanguageToggle current={language} onChange={setLanguage} />
