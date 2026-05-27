@@ -4,7 +4,6 @@ export function HomePage({ onUserMode, onOutreachMode }) {
       <div className="home-content">
         <div className="home-logo">
           <span className="home-logo-mark">ShelterIQ</span>
-          <span className="home-logo-sub">Broward County</span>
         </div>
 
         <div className="home-stat-block">
@@ -20,7 +19,7 @@ export function HomePage({ onUserMode, onOutreachMode }) {
         </div>
 
         <p className="home-purpose">
-          Find shelter, food, and services in Broward County — instantly,
+          Find shelter, food, and services — instantly,
           in English, Spanish, or Haitian Creole.
         </p>
 
