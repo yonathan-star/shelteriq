@@ -19,6 +19,18 @@ function loadSavedResults() {
   try { return JSON.parse(localStorage.getItem("sq_results") || "null"); } catch { return null; }
 }
 
+function inferNeedFromSituation(text) {
+  const normalized = text.toLowerCase();
+  if (/food|meal|hungry|eat|pantry/.test(normalized)) return "food";
+  if (/mental|crisis|depress|anxiety|therapy|counsel/.test(normalized)) return "mental_health";
+  if (/substance|drug|alcohol|detox|addiction|recovery/.test(normalized)) return "substance_abuse";
+  if (/veteran|military|\bva\b/.test(normalized)) return "veteran";
+  if (/youth|teen|minor|under 21|young/.test(normalized)) return "youth";
+  if (/legal|lawyer|court|eviction/.test(normalized)) return "legal";
+  if (/medical|doctor|clinic|health|medicine/.test(normalized)) return "medical";
+  return "shelter";
+}
+
 export default function App() {
   const [showHome, setShowHome] = useState(true);
   const [language, setLanguage] = useState("en");
@@ -64,7 +76,16 @@ export default function App() {
         setStandardView("results");
       }
     } catch {
-      // Silently fail — user stays on intake
+      const fallbackNeed = inferNeedFromSituation(situation);
+      const matched = filterServices(fallbackNeed, "alone", "unsure", coords);
+      const meta = { complex: true, fallback: true, need: fallbackNeed };
+      recordAttempt({ query: situation.slice(0, 120), resultsShown: matched });
+      setResults(matched);
+      setIntakeMeta(meta);
+      localStorage.setItem("sq_results", JSON.stringify(matched));
+      localStorage.setItem("sq_meta", JSON.stringify(meta));
+      localStorage.removeItem("sq_qa");
+      setStandardView("results");
     }
     setLoading(false);
   };

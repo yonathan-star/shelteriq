@@ -64,7 +64,7 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
         <span className={`rank-badge rank-${rank}`}>{rank}</span>
         <div style={{ flex: 1 }}>
           <h3 className="service-name">{service.name}</h3>
-          {service.distance !== null && (
+          {service.distance != null && (
             <p className="service-distance">{L.miles(service.distance)}</p>
           )}
         </div>
