@@ -55,7 +55,7 @@ export function MapView({ services: results = [], userCoords, language = "en" })
           onClick={() => setShowSafeSpots(v => !v)}
         >
           <Layers size={14} />
-          <span>{showSafeSpots ? L.safeSpotsOff : L.safeSpotsToggle}</span>
+          <span>{showSafeSpots ? L.safeSpotsOff : L.safeSpotsShort}</span>
         </button>
         {showSafeSpots && (
           <p className="safe-spots-hint">{L.safeSpotsHint}</p>
