@@ -23,11 +23,6 @@ async function generateGapAnalysis(summary) {
     return buildLocalGapAnalysis(summary);
   }
 
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
-    generationConfig: { maxOutputTokens: 300, temperature: 0.4 }
-  });
-
   const prompt = `You are an analyst for a Broward County homeless outreach team.
 Based on this session's search data, write a 3-4 sentence plain-English
 gap analysis. Be specific. Identify what types of services are most in
@@ -43,8 +38,27 @@ Search data:
 
 Write the gap analysis now:`;
 
-  const result = await model.generateContent(prompt);
-  return result.response.text() || buildLocalGapAnalysis(summary);
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+  for (const modelName of models) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: { maxOutputTokens: 300, temperature: 0.35 }
+      });
+      const result = await Promise.race([
+        model.generateContent(prompt),
+        new Promise((_, reject) => {
+          window.setTimeout(() => reject(new Error("Gap analysis timed out")), 12000);
+        }),
+      ]);
+      const text = result.response.text()?.trim();
+      if (text) return text;
+    } catch {
+      // Try the next model, then fall back locally below.
+    }
+  }
+
+  return buildLocalGapAnalysis(summary);
 }
 
 export function IntelligenceDashboard() {
@@ -71,7 +85,7 @@ export function IntelligenceDashboard() {
   if (!summary) {
     return (
       <div className="intel-empty">
-        <p>Run at least 2 searches to generate a gap analysis.</p>
+        <p>Run a search to generate a gap analysis.</p>
       </div>
     );
   }
