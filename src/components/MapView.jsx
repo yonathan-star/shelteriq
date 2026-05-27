@@ -395,7 +395,13 @@ export function MapView({
         mapContainerClassName="map-container"
         center={center}
         zoom={11}
-        options={{ disableDefaultUI: isNavMode, zoomControl: !isNavMode }}
+        options={{
+          disableDefaultUI: isNavMode,
+          zoomControl: !isNavMode,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+        }}
         onLoad={(map) => {
           mapRef.current = map;
         }}
