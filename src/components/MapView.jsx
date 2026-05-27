@@ -286,6 +286,12 @@ export function MapView({
   const remainingSteps = navSteps.slice(activeStepIndex + 1, activeStepIndex + 4);
   const speedMph = Number.isFinite(userSpeed) ? Math.max(0, userSpeed * 2.23694) : null;
 
+  const centerOnUser = () => {
+    if (!mapRef.current || !userCoords) return;
+    mapRef.current.panTo(userCoords);
+    mapRef.current.setZoom(isNavMode ? 17 : 13);
+  };
+
   if (!isLoaded) return <div className="map-loading">Loading map...</div>;
 
   const circle = window.google.maps.SymbolPath.CIRCLE;
@@ -303,6 +309,18 @@ export function MapView({
           </button>
           {showSafeSpots && <p className="safe-spots-hint">{L.safeSpotsHint}</p>}
         </div>
+      )}
+
+      {!isNavMode && (
+        <button
+          className="map-center-user"
+          onClick={centerOnUser}
+          disabled={!userCoords}
+          title={userCoords ? "Center on your location" : "Location unavailable"}
+          aria-label="Center map on your location"
+        >
+          <LocateFixed size={16} />
+        </button>
       )}
 
       {isNavMode && (
@@ -370,11 +388,10 @@ export function MapView({
             <button
               className="nav-mode-locate"
               onClick={() => {
-                if (!mapRef.current || !userCoords) return;
                 setFollowMode(true);
-                mapRef.current.panTo(userCoords);
-                mapRef.current.setZoom(17);
+                centerOnUser();
               }}
+              disabled={!userCoords}
             >
               <LocateFixed size={14} />
               Follow

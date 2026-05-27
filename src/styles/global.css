@@ -1961,6 +1961,35 @@ header > div:first-child { min-width: 0; }
   max-width: 100%;
 }
 
+.map-center-user {
+  position: absolute;
+  right: 12px;
+  bottom: 158px;
+  z-index: 10;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid rgba(15, 23, 42, 0.14);
+  background: rgba(255,255,255,0.96);
+  color: var(--green-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-card);
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+
+.map-center-user:active {
+  background: var(--green-50);
+  transform: scale(0.96);
+}
+
+.map-center-user:disabled {
+  color: var(--ink-300);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .cat-library  { background: #DBEAFE; color: #1D4ED8; }
 .cat-cooling  { background: #D1FAE5; color: #065F46; }
 .cat-24hr     { background: #FEF3C7; color: #92400E; }
