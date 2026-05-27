@@ -42,6 +42,12 @@ const TRAVEL_MODES = [
   { id: "TRANSIT", label: "Transit", icon: Bus },
 ];
 
+const DEFAULT_CENTER = { lat: 26.1224, lng: -80.1534 };
+
+function getEmbeddedTravelMode(mode) {
+  return mode === "BICYCLING" ? "WALKING" : mode;
+}
+
 function getDirectionsUrl(coords, address, travelMode = "DRIVING") {
   const dest = encodeURIComponent(address || `${coords.lat},${coords.lng}`);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -121,14 +127,18 @@ export function MapView({
   const [navSteps, setNavSteps] = useState([]);
   const [navError, setNavError] = useState("");
   const [activeStepIndex, setActiveStepIndex] = useState(0);
-  const [followMode, setFollowMode] = useState(true);
+  const [followMode, setFollowMode] = useState(false);
   const [arrived, setArrived] = useState(false);
   const [routePath, setRoutePath] = useState([]);
   const [rerouteNonce, setRerouteNonce] = useState(0);
   const [travelMode, setTravelMode] = useState("WALKING");
   const [navPanelOpen, setNavPanelOpen] = useState(false);
+  const [routeOrigin, setRouteOrigin] = useState(null);
   const mapRef = useRef(null);
+  const hasCenteredOnUserRef = useRef(false);
   const lastRerouteAtRef = useRef(0);
+  const fitRouteKeyRef = useRef("");
+  const navTargetKeyRef = useRef("");
 
   const L = t(language);
   const spotLabels = SPOT_LABELS[language] || SPOT_LABELS.en;
@@ -139,23 +149,46 @@ export function MapView({
 
   useEffect(() => {
     if (!navTarget?.coords) return;
+    const navKey = `${navTarget.id || navTarget.name || "target"}:${navTarget.coords.lat},${navTarget.coords.lng}`;
+    if (navTargetKeyRef.current === navKey) return;
+    navTargetKeyRef.current = navKey;
     setNavDestination({
       name: navTarget.name,
       address: navTarget.address,
       coords: navTarget.coords,
     });
-    setFollowMode(true);
+    setRouteOrigin(userCoords);
+    fitRouteKeyRef.current = "";
+    setFollowMode(false);
     setArrived(false);
     setNavPanelOpen(false);
-  }, [navTarget]);
+  }, [navTarget, userCoords]);
+
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current || !userCoords || hasCenteredOnUserRef.current) return;
+    mapRef.current.panTo(userCoords);
+    mapRef.current.setZoom(12);
+    hasCenteredOnUserRef.current = true;
+  }, [isLoaded, userCoords]);
+
+  useEffect(() => {
+    if (!navDestination?.coords || routeOrigin || !userCoords) return;
+    setRouteOrigin(userCoords);
+    fitRouteKeyRef.current = "";
+  }, [navDestination, routeOrigin, userCoords]);
 
   useEffect(() => {
     if (!isLoaded || !mapRef.current || !navDestination?.coords) return;
+    const originForFit = routeOrigin || userCoords;
+    const originKey = originForFit ? `${originForFit.lat},${originForFit.lng}` : "no-origin";
+    const fitKey = `${originKey}:${navDestination.coords.lat},${navDestination.coords.lng}:${travelMode}`;
+    if (fitRouteKeyRef.current === fitKey) return;
     const bounds = new window.google.maps.LatLngBounds();
-    if (userCoords) bounds.extend(userCoords);
+    if (originForFit) bounds.extend(originForFit);
     bounds.extend(navDestination.coords);
     mapRef.current.fitBounds(bounds, 72);
-  }, [isLoaded, navDestination, userCoords]);
+    fitRouteKeyRef.current = fitKey;
+  }, [isLoaded, navDestination, routeOrigin, travelMode, userCoords]);
 
   useEffect(() => {
     if (!isLoaded || !mapRef.current || !userCoords || !navDestination || !followMode) return;
@@ -164,13 +197,13 @@ export function MapView({
   }, [isLoaded, userCoords, navDestination, followMode]);
 
   useEffect(() => {
-    if (!isLoaded || !userCoords || !navDestination?.coords) {
+    if (!isLoaded || !routeOrigin || !navDestination?.coords) {
       setDirections(null);
       setNavMeta(null);
       setNavSteps([]);
       setRoutePath([]);
       setActiveStepIndex(0);
-      setNavError(navDestination?.coords && !userCoords ? "Turn on location to use in-app navigation." : "");
+      setNavError(navDestination?.coords && !routeOrigin ? "Turn on location to use in-app navigation." : "");
       return;
     }
 
@@ -185,9 +218,9 @@ export function MapView({
 
     svc.route(
       {
-        origin: userCoords,
+        origin: routeOrigin,
         destination: navDestination.coords,
-        travelMode: window.google.maps.TravelMode[travelMode],
+        travelMode: window.google.maps.TravelMode[getEmbeddedTravelMode(travelMode)],
         provideRouteAlternatives: false,
       },
       (result, status) => {
@@ -224,7 +257,7 @@ export function MapView({
     );
 
     return () => window.clearTimeout(timeout);
-  }, [isLoaded, navDestination, rerouteNonce, travelMode, userCoords]);
+  }, [isLoaded, navDestination, rerouteNonce, routeOrigin, travelMode]);
 
   useEffect(() => {
     if (!userCoords || navSteps.length === 0 || !navDestination?.coords) return;
@@ -245,6 +278,7 @@ export function MapView({
     const now = Date.now();
     if (routeOffset > 0.08 && now - lastRerouteAtRef.current > 8000) {
       lastRerouteAtRef.current = now;
+      setRouteOrigin(userCoords);
       setRerouteNonce((value) => value + 1);
     }
   }, [navDestination, navSteps, routePath, userCoords]);
@@ -253,7 +287,9 @@ export function MapView({
     setSelected(null);
     setSelectedSpot(null);
     setNavDestination({ name: service.name, address: service.address, coords: service.coords });
-    setFollowMode(true);
+    setRouteOrigin(userCoords);
+    fitRouteKeyRef.current = "";
+    setFollowMode(false);
     setArrived(false);
     setNavPanelOpen(false);
   };
@@ -262,7 +298,9 @@ export function MapView({
     setSelected(null);
     setSelectedSpot(null);
     setNavDestination({ name: spot.name, address: spot.address, coords: spot.coords });
-    setFollowMode(true);
+    setRouteOrigin(userCoords);
+    fitRouteKeyRef.current = "";
+    setFollowMode(false);
     setArrived(false);
     setNavPanelOpen(false);
   };
@@ -274,14 +312,17 @@ export function MapView({
     setNavSteps([]);
     setNavError("");
     setRoutePath([]);
+    setRouteOrigin(null);
+    fitRouteKeyRef.current = "";
+    navTargetKeyRef.current = "";
     setActiveStepIndex(0);
-    setFollowMode(true);
+    setFollowMode(false);
     setArrived(false);
     setNavPanelOpen(false);
     onClearNavTarget?.();
   };
 
-  const center = userCoords || { lat: 26.1224, lng: -80.1534 };
+  const center = DEFAULT_CENTER;
   const resultIds = new Set(results.map((s) => s.id));
   const mappable = allServices.filter((s) => s.coords);
   const isNavMode = Boolean(navDestination);
@@ -392,6 +433,7 @@ export function MapView({
               className="nav-mode-locate"
               onClick={() => {
                 setFollowMode(true);
+                setNavPanelOpen(false);
                 centerOnUser();
               }}
               disabled={!userCoords}
@@ -437,8 +479,8 @@ export function MapView({
                   </div>
                   <div className="nav-step-sub">
                     {activeStep.distanceText}
-                    {activeStep.durationText ? ` · ${activeStep.durationText}` : ""}
-                    {userAccuracy ? ` · ±${Math.round(userAccuracy)} ft` : ""}
+                    {activeStep.durationText ? ` - ${activeStep.durationText}` : ""}
+                    {userAccuracy ? ` - +/-${Math.round(userAccuracy)} ft` : ""}
                   </div>
                 </div>
                 {remainingSteps.length > 0 && (
@@ -450,7 +492,7 @@ export function MapView({
                           <div className="nav-secondary-text">{step.instructionText}</div>
                           <div className="nav-secondary-meta">
                             {step.distanceText}
-                            {step.durationText ? ` · ${step.durationText}` : ""}
+                            {step.durationText ? ` - ${step.durationText}` : ""}
                           </div>
                         </div>
                       </div>
