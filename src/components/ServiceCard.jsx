@@ -129,6 +129,16 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
           <Phone size={16} />
           <span>{L.callBtn(service.phone)}</span>
         </a>
+        {service.coords && onNavigate && (
+          <button
+            type="button"
+            className="btn-directions"
+            onClick={handleNavigate}
+          >
+            <Navigation size={15} />
+            <span>{language === "es" ? "Navegar" : language === "ht" ? "Direksyon" : "Navigate"}</span>
+          </button>
+        )}
         {!script && (
           <button
             className="btn-script"
@@ -142,16 +152,6 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
           </button>
         )}
       </div>
-
-      {service.coords && (
-        <button
-          className="btn-navigate"
-          onClick={handleNavigate}
-        >
-          <Navigation size={13} />
-          <span>{language === "es" ? "Navegar" : language === "ht" ? "Direksyon" : "Navigate"}</span>
-        </button>
-      )}
 
       {/* "I'm Here" check-in */}
       {!showCheckin ? (
