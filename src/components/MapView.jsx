@@ -42,12 +42,15 @@ const TRAVEL_MODES = [
   { id: "TRANSIT", label: "Transit", icon: Bus },
 ];
 
-function getDirectionsUrl(coords, address) {
+function getDirectionsUrl(coords, address, travelMode = "DRIVING") {
   const dest = encodeURIComponent(address || `${coords.lat},${coords.lng}`);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  return isIOS
-    ? `maps://maps.apple.com/?daddr=${dest}`
-    : `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+  if (isIOS) {
+    const dirflg = travelMode === "WALKING" ? "w" : travelMode === "TRANSIT" ? "r" : "d";
+    return `https://maps.apple.com/?daddr=${dest}&dirflg=${dirflg}`;
+  }
+  const mode = travelMode.toLowerCase();
+  return `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=${mode}`;
 }
 
 function htmlToText(html) {
@@ -396,6 +399,14 @@ export function MapView({
               <LocateFixed size={14} />
               Follow
             </button>
+            <a
+              className="nav-mode-open-app"
+              href={getDirectionsUrl(navDestination.coords, navDestination.address, travelMode)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open app
+            </a>
           </div>
 
           <div className="nav-mode-body">
@@ -403,7 +414,7 @@ export function MapView({
               <div className="nav-mode-error">
                 <p>{navError}</p>
                 <a
-                  href={getDirectionsUrl(navDestination.coords, navDestination.address)}
+                  href={getDirectionsUrl(navDestination.coords, navDestination.address, travelMode)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="nav-mode-fallback"
@@ -448,7 +459,7 @@ export function MapView({
                 )}
               </>
             ) : (
-              <div className="nav-mode-loading">Calculating driving directions...</div>
+              <div className="nav-mode-loading">Calculating route...</div>
             )}
           </div>
         </div>
