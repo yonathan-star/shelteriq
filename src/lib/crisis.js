@@ -3,6 +3,7 @@ const PATTERNS = {
   suicide: [
     /suicid/i, /kill myself/i, /end my life/i, /take my life/i,
     /want to die/i, /don.t want to live/i, /dont want to live/i,
+    /do not want to live/i,
     /hurt myself/i, /self.harm/i, /cut myself/i, /overdos/i,
     /no reason to live/i, /better off dead/i, /hanging myself/i,
     // Spanish
