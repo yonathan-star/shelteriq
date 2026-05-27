@@ -66,7 +66,7 @@ export function MapView({ services: results = [], userCoords, language = "en" })
         mapContainerClassName="map-container"
         center={center}
         zoom={11}
-        options={{ disableDefaultUI: false, zoomControl: true }}
+        options={{ disableDefaultUI: false, zoomControl: true, mapTypeControl: false }}
         onClick={() => { setSelected(null); setSelectedSpot(null); }}
       >
         {userCoords && (
