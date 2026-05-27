@@ -23,13 +23,20 @@ export default function App() {
   const [showHome, setShowHome] = useState(true);
   const [language, setLanguage] = useState("en");
   const [view, setView] = useState(() => loadSavedResults() ? "results" : "intake");
+  const [lastStandardView, setLastStandardView] = useState(() => loadSavedResults() ? "results" : "intake");
   const [results, setResults] = useState(() => loadSavedResults() || []);
+  const [navTarget, setNavTarget] = useState(null);
   const [intakeMeta, setIntakeMeta] = useState(() => {
     try { return JSON.parse(localStorage.getItem("sq_meta") || "{}"); } catch { return {}; }
   });
   const [loading, setLoading] = useState(false);
   const [crisis, setCrisis] = useState(null); // { type, situation }
-  const { coords } = useGeolocation();
+  const { coords, heading, speed, accuracy } = useGeolocation();
+
+  const setStandardView = (nextView) => {
+    setLastStandardView(nextView);
+    setView(nextView);
+  };
 
   const handleSimpleSubmit = (need, who, area) => {
     const matched = filterServices(need, who, area, coords);
@@ -40,7 +47,7 @@ export default function App() {
     localStorage.setItem("sq_results", JSON.stringify(matched));
     localStorage.setItem("sq_meta", JSON.stringify(meta));
     localStorage.removeItem("sq_qa");
-    setView("results");
+    setStandardView("results");
   };
 
   const handleComplexSubmit = async (situation) => {
@@ -54,7 +61,7 @@ export default function App() {
         localStorage.setItem("sq_results", JSON.stringify(matched));
         localStorage.setItem("sq_meta", JSON.stringify({ complex: true }));
         localStorage.removeItem("sq_qa");
-        setView("results");
+        setStandardView("results");
       }
     } catch {
       // Silently fail — user stays on intake
@@ -76,7 +83,7 @@ export default function App() {
         localStorage.setItem("sq_results", JSON.stringify(matched));
         localStorage.setItem("sq_meta", JSON.stringify({ complex: true }));
         localStorage.removeItem("sq_qa");
-        setView("results");
+        setStandardView("results");
       }
     } catch {
       // Silently fail
@@ -89,24 +96,26 @@ export default function App() {
     setView("crisis");
   };
 
-  const handleCrisisDismiss = () => {
+  const handleCrisisDismiss = async () => {
     // After dismissing crisis banner, run the intake as normal
-    if (crisis?.situation) {
-      handleComplexSubmit(crisis.situation);
-    }
+    const pendingSituation = crisis?.situation;
     setCrisis(null);
-    setView("results");
+    setStandardView("intake");
+    if (pendingSituation) {
+      await handleComplexSubmit(pendingSituation);
+    }
   };
 
   const handleReset = () => {
     setResults([]);
     setIntakeMeta({});
     setCrisis(null);
+    setNavTarget(null);
     resetMemory();
     localStorage.removeItem("sq_results");
     localStorage.removeItem("sq_meta");
     localStorage.removeItem("sq_qa");
-    setView("intake");
+    setStandardView("intake");
   };
 
   if (showHome) {
@@ -120,6 +129,11 @@ export default function App() {
 
   const isOutreach = view === "outreach";
 
+  const handleNavigateToService = (service) => {
+    setNavTarget(service);
+    setStandardView("map");
+  };
+
   return (
     <div className="app-shell">
       <header>
@@ -130,7 +144,13 @@ export default function App() {
         <div className="header-actions">
           <LanguageToggle current={language} onChange={setLanguage} />
           <button
-            onClick={() => setView(v => v === "outreach" ? (results.length ? "results" : "intake") : "outreach")}
+            onClick={() => {
+              if (view === "outreach") {
+                setView(lastStandardView);
+                return;
+              }
+              setView("outreach");
+            }}
             className="btn-mode"
           >
             {isOutreach ? "User mode" : "Outreach"}
@@ -149,7 +169,7 @@ export default function App() {
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setView(tab.id)}
+              onClick={() => setStandardView(tab.id)}
               className={`nav-tab ${view === tab.id ? "active" : ""}`}
             >
               {tab.label}
@@ -188,17 +208,28 @@ export default function App() {
               need={intakeMeta.need}
               who={intakeMeta.who}
               onSuggestNext={handleSuggestNext}
+              onViewMap={results.length > 0 ? () => setStandardView("map") : undefined}
+              onNavigateService={handleNavigateToService}
             />
           </div>
         )}
         {view === "map" && (
           <div className="tab-content map-panel">
-            <MapView services={results.length > 0 ? results : []} userCoords={coords} language={language} />
+            <MapView
+              services={results.length > 0 ? results : []}
+              userCoords={coords}
+              userHeading={heading}
+              userSpeed={speed}
+              userAccuracy={accuracy}
+              language={language}
+              navTarget={navTarget}
+              onClearNavTarget={() => setNavTarget(null)}
+            />
           </div>
         )}
         {view === "outreach" && (
           <div className="tab-content scroll-panel">
-            <OutreachMode language={language} />
+            <OutreachMode language={language} onNavigateService={handleNavigateToService} />
           </div>
         )}
       </main>

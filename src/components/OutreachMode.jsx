@@ -7,14 +7,34 @@ import { IntelligenceDashboard } from "./IntelligenceDashboard";
 import { useGeolocation } from "../hooks/useGeolocation";
 import { t } from "../lib/i18n";
 
-export function OutreachMode({ language }) {
-  const [activeTab, setActiveTab] = useState("search");
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
+const OUTREACH_STATE_KEY = "sq_outreach_state";
+
+function loadOutreachState() {
+  try {
+    return JSON.parse(sessionStorage.getItem(OUTREACH_STATE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function OutreachMode({ language, onNavigateService }) {
+  const savedState = loadOutreachState();
+  const [activeTab, setActiveTab] = useState(savedState.activeTab || "search");
+  const [query, setQuery] = useState(savedState.query || "");
+  const [results, setResults] = useState(savedState.results || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { coords } = useGeolocation();
   const L = t(language);
+
+  const persistState = (next) => {
+    sessionStorage.setItem(OUTREACH_STATE_KEY, JSON.stringify({
+      activeTab,
+      query,
+      results,
+      ...next,
+    }));
+  };
 
   const handleSearch = async () => {
     if (!query.trim() || loading) return;
@@ -24,6 +44,7 @@ export function OutreachMode({ language }) {
       const response = await runOutreachLookup(query, language);
       const enriched = enrichResults(response.data.matches, response.data.reasons, coords);
       setResults(enriched);
+      persistState({ query, results: enriched });
       logSearch({
         query,
         resultsCount: enriched.length,
@@ -33,6 +54,7 @@ export function OutreachMode({ language }) {
       console.warn("Outreach AI search failed, using keyword fallback:", err);
       const fallbackResults = keywordSearch(query, coords);
       setResults(fallbackResults);
+      persistState({ query, results: fallbackResults });
       logSearch({
         query,
         resultsCount: fallbackResults.length,
@@ -51,14 +73,20 @@ export function OutreachMode({ language }) {
         <button
           className={`outreach-tab${activeTab === "search" ? " active" : ""}`}
           data-tab="search"
-          onClick={() => setActiveTab("search")}
+          onClick={() => {
+            setActiveTab("search");
+            persistState({ activeTab: "search" });
+          }}
         >
           Search
         </button>
         <button
           className={`outreach-tab${activeTab === "intelligence" ? " active" : ""}`}
           data-tab="intelligence"
-          onClick={() => setActiveTab("intelligence")}
+          onClick={() => {
+            setActiveTab("intelligence");
+            persistState({ activeTab: "intelligence" });
+          }}
         >
           Intelligence
         </button>
@@ -69,7 +97,11 @@ export function OutreachMode({ language }) {
           <div className="outreach-form">
             <input
               value={query}
-              onChange={e => setQuery(e.target.value)}
+              onChange={e => {
+                const nextQuery = e.target.value;
+                setQuery(nextQuery);
+                persistState({ query: nextQuery });
+              }}
               onKeyDown={e => e.key === "Enter" && handleSearch()}
               placeholder={L.outreachPlaceholder}
               className="outreach-input"
@@ -82,7 +114,13 @@ export function OutreachMode({ language }) {
           {loading
             ? [0, 1, 2].map(i => <SkeletonCard key={i} />)
             : results.map((service, i) => (
-              <ServiceCard key={service.id} service={service} rank={i + 1} language={language} />
+              <ServiceCard
+                key={service.id}
+                service={service}
+                rank={i + 1}
+                language={language}
+                onNavigate={onNavigateService}
+              />
             ))}
         </>
       )}

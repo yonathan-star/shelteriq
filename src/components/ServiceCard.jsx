@@ -24,7 +24,7 @@ export function SkeletonCard() {
   );
 }
 
-export function ServiceCard({ service, rank, need, who, language = "en" }) {
+export function ServiceCard({ service, rank, need, who, language = "en", onNavigate }) {
   const [script, setScript] = useState(null);
   const [loadingScript, setLoadingScript] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -51,6 +51,11 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
       setScript(L.callAhead);
     }
     setLoadingScript(false);
+  };
+
+  const handleNavigate = () => {
+    if (!service.coords || !onNavigate) return;
+    onNavigate(service);
   };
 
   return (
@@ -137,6 +142,16 @@ export function ServiceCard({ service, rank, need, who, language = "en" }) {
           </button>
         )}
       </div>
+
+      {service.coords && (
+        <button
+          className="btn-navigate"
+          onClick={handleNavigate}
+        >
+          <Navigation size={13} />
+          <span>{language === "es" ? "Navegar" : language === "ht" ? "Direksyon" : "Navigate"}</span>
+        </button>
+      )}
 
       {/* "I'm Here" check-in */}
       {!showCheckin ? (
