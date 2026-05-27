@@ -2,7 +2,136 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { services } from "../data/services.js";
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-const MODEL = "gemini-3.1-flash-lite";
+const MODEL = "gemini-2.0-flash";
+
+function buildLocalCallScript(service, need, who, language = "en") {
+  const opening = language === "es"
+    ? `Hola, llamo sobre ${need || "refugio"}.`
+    : language === "ht"
+      ? `Bonjou, m ap rele pou ${need || "abri"}.`
+      : `Hi, I'm calling about ${need || "shelter"}.`;
+  const identity = who === "family"
+    ? (language === "es" ? "Estoy con niños y necesito saber si aceptan familias." :
+      language === "ht" ? "Mwen ak timoun epi mwen bezwen konnen si nou aksepte fanmi." :
+      "I'm with children and need to know if you accept families.")
+    : (language === "es" ? "Necesito saber si hay espacio disponible hoy." :
+      language === "ht" ? "Mwen bezwen konnen si gen plas ki disponib jodi a." :
+      "I need to know if you have space available today.");
+  const details = service.walkin
+    ? (language === "es" ? "¿Puedo llegar sin cita y qué debo llevar?" :
+      language === "ht" ? "Èske mwen ka vini san randevou, epi kisa mwen dwe pote?" :
+      "Can I come in without an appointment, and what should I bring?")
+    : (language === "es" ? "¿Debo llamar antes de llegar y qué documentos necesitan?" :
+      language === "ht" ? "Èske mwen dwe rele anvan mwen vini, epi ki dokiman nou bezwen?" :
+      "Do I need to call ahead before coming, and what documents do you need?");
+  return `${opening} ${identity} ${details} ${service.noId ? "" : ""}`.trim();
+}
+
+function getAreaForService(service) {
+  if (!service.coords) return "unknown";
+  if (service.coords.lat < 26.07) return "south";
+  if (service.coords.lat > 26.20) return "north";
+  return "central";
+}
+
+function buildLocalOutreachReason(service, matchedTerms) {
+  const reasons = [];
+  if (matchedTerms.length > 0) reasons.push(`Matches ${matchedTerms.slice(0, 2).join(" and ")}`);
+  if (service.walkin) reasons.push("accepts walk-ins");
+  if (service.eligibility.noId) reasons.push("works for clients without ID");
+  if (service.eligibility.families) reasons.push("can support families");
+  if (service.eligibility.veterans) reasons.push("supports veterans");
+  return reasons.length > 0
+    ? `${reasons.slice(0, 3).join(", ")}.`
+    : "Relevant match for this outreach search.";
+}
+
+function runLocalOutreachLookup(query) {
+  const normalized = query.toLowerCase();
+  const tokens = normalized.split(/[^a-z0-9]+/).filter(Boolean);
+  const matchedTermsById = new Map();
+  const areaTerms = ["north", "central", "south"];
+  const typeKeywords = {
+    shelter: ["shelter", "bed", "housing", "sleep"],
+    food: ["food", "meal", "meals", "hungry", "pantry"],
+    mental_health: ["mental", "depression", "anxiety", "psychiatric", "therapy"],
+    substance_abuse: ["substance", "addiction", "drug", "alcohol", "detox", "recovery"],
+    medical: ["medical", "doctor", "clinic", "health"],
+    legal: ["legal", "lawyer", "court", "eviction", "id"],
+    outreach: ["outreach", "street", "mobile"],
+  };
+
+  const scored = services.map((service) => {
+    let score = 0;
+    const matchedTerms = [];
+
+    Object.entries(typeKeywords).forEach(([type, keywords]) => {
+      if (keywords.some((keyword) => normalized.includes(keyword)) && service.type.includes(type)) {
+        score += 4;
+        matchedTerms.push(type.replace("_", " "));
+      }
+    });
+
+    if (tokens.includes("veteran") && service.eligibility.veterans) {
+      score += 4;
+      matchedTerms.push("veteran support");
+    }
+    if ((tokens.includes("family") || tokens.includes("children")) && service.eligibility.families) {
+      score += 4;
+      matchedTerms.push("family support");
+    }
+    if ((tokens.includes("youth") || tokens.includes("teen")) && service.eligibility.maxAge !== null) {
+      score += 4;
+      matchedTerms.push("youth support");
+    }
+    if (normalized.includes("no id") && service.eligibility.noId) {
+      score += 3;
+      matchedTerms.push("no ID");
+    }
+    if (tokens.includes("pet") && service.eligibility.pets) {
+      score += 3;
+      matchedTerms.push("pets");
+    }
+    if (tokens.includes("walkin") && service.walkin) {
+      score += 2;
+      matchedTerms.push("walk-in");
+    }
+    if ((tokens.includes("male") || tokens.includes("man") || tokens.includes("men")) && service.eligibility.men) {
+      score += 1;
+    }
+    if ((tokens.includes("female") || tokens.includes("woman") || tokens.includes("women")) && service.eligibility.women) {
+      score += 1;
+    }
+
+    const matchedArea = areaTerms.find((term) => tokens.includes(term));
+    if (matchedArea && getAreaForService(service) === matchedArea) {
+      score += 2;
+      matchedTerms.push(`${matchedArea} county`);
+    }
+
+    if (score === 0 && service.type.includes("shelter")) {
+      score = service.walkin ? 1.5 : 1;
+    }
+
+    matchedTermsById.set(service.id, matchedTerms);
+    return { service, score };
+  });
+
+  const matches = scored
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map(({ service }) => service.id);
+
+  const reasons = Object.fromEntries(
+    matches.map((id) => {
+      const service = services.find((entry) => entry.id === id);
+      return [id, buildLocalOutreachReason(service, matchedTermsById.get(id) || [])];
+    })
+  );
+
+  return { type: "results", data: { matches, reasons } };
+}
 
 const COMPLEX_PROMPT = (language = "en", memorySummary = null) => `
 You are ShelterIQ, an AI resource navigator for people experiencing homelessness in Broward County, Florida.
@@ -50,7 +179,7 @@ ${JSON.stringify(services.map(s => ({
   youth: s.eligibility.maxAge !== null && s.eligibility.maxAge <= 24,
   noId: s.eligibility.noId,
   pets: s.eligibility.pets, veteran: s.eligibility.veterans,
-  area: s.coords ? (s.coords.lat < 26.07 ? "south" : s.coords.lat > 26.20 ? "north" : "central") : "any",
+  area: s.coords ? getAreaForService(s) : "any",
 })))}
 `;
 
@@ -78,6 +207,10 @@ export async function runComplexIntake(situation, language = "en", memorySummary
 
 // Generates a personalized call script for a specific service
 export async function generateCallScript(service, need, who, language = "en") {
+  if (!import.meta.env.VITE_GEMINI_API_KEY) {
+    return buildLocalCallScript(service, need, who, language);
+  }
+
   const model = genAI.getGenerativeModel({
     model: MODEL,
     generationConfig: { maxOutputTokens: 120, temperature: 0.3 }
@@ -99,8 +232,12 @@ Service facts: ${facts}.
 Tell them exactly what to say to get help quickly. Plain language only.
 Respond in ${lang}.`;
 
-  const result = await model.generateContent(prompt);
-  return result.response.text().trim();
+  try {
+    const result = await model.generateContent(prompt);
+    return result.response.text().trim();
+  } catch {
+    return buildLocalCallScript(service, need, who, language);
+  }
 }
 
 // Answers follow-up questions about the matched services
@@ -133,6 +270,10 @@ Rules:
 
 // Outreach worker keyword lookup — genuinely needs AI for flexible matching
 export async function runOutreachLookup(query, language = "en") {
+  if (!import.meta.env.VITE_GEMINI_API_KEY) {
+    return runLocalOutreachLookup(query);
+  }
+
   const model = genAI.getGenerativeModel({
     model: MODEL,
     generationConfig: { maxOutputTokens: 400, temperature: 0.1 }
@@ -146,9 +287,7 @@ export async function runOutreachLookup(query, language = "en") {
     id: s.id,
     name: s.name,
     type: s.type,
-    area: s.coords
-      ? (s.coords.lat < 26.07 ? "south" : s.coords.lat > 26.20 ? "north" : "central")
-      : "unknown",
+    area: getAreaForService(s),
     walkin: s.walkin,
     gender: s.eligibility.men && s.eligibility.women ? "any" : s.eligibility.men ? "men" : s.eligibility.women ? "women" : "unknown",
     families: s.eligibility.families,
@@ -170,9 +309,13 @@ Return ONLY this JSON (reasons in ${lang}):
 SERVICES:
 ${JSON.stringify(compactDB)}`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("No JSON in outreach response");
-  return { type: "results", data: JSON.parse(jsonMatch[0]) };
+  try {
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON in outreach response");
+    return { type: "results", data: JSON.parse(jsonMatch[0]) };
+  } catch {
+    return runLocalOutreachLookup(query);
+  }
 }
