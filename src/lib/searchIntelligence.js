@@ -25,7 +25,7 @@ export function logSearch({ query, resultsCount, serviceTypes }) {
 }
 
 export function getIntelligenceSummary() {
-  if (searchLog.length < 2) return null;
+  if (searchLog.length < 1) return null;
 
   const typeFrequency = {};
   const lowResultSearches = [];

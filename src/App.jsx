@@ -10,6 +10,7 @@ import { CrisisBanner } from "./components/CrisisBanner";
 import { filterServices, enrichResults } from "./lib/matching";
 import { runComplexIntake } from "./lib/gemini";
 import { recordAttempt, resetMemory, getMemorySummary } from "./lib/triageMemory";
+import { logSearch } from "./lib/searchIntelligence";
 import { useGeolocation } from "./hooks/useGeolocation";
 
 // Remove old ChatInterface session storage key — can cause Gemini history errors
@@ -56,6 +57,11 @@ export default function App() {
     setResults(matched);
     setIntakeMeta(meta);
     recordAttempt({ query: `${need} · ${who} · ${area}`, resultsShown: matched });
+    logSearch({
+      query: `${need} ${who} ${area}`,
+      resultsCount: matched.length,
+      serviceTypes: matched.flatMap(s => s.type),
+    });
     localStorage.setItem("sq_results", JSON.stringify(matched));
     localStorage.setItem("sq_meta", JSON.stringify(meta));
     localStorage.removeItem("sq_qa");
@@ -70,6 +76,11 @@ export default function App() {
         const matched = enrichResults(response.data.matches, response.data.reasons, coords);
         recordAttempt({ query: situation.slice(0, 120), resultsShown: matched });
         setResults(matched);
+        logSearch({
+          query: situation.slice(0, 120),
+          resultsCount: matched.length,
+          serviceTypes: matched.flatMap(s => s.type),
+        });
         localStorage.setItem("sq_results", JSON.stringify(matched));
         localStorage.setItem("sq_meta", JSON.stringify({ complex: true }));
         localStorage.removeItem("sq_qa");
@@ -82,6 +93,11 @@ export default function App() {
       recordAttempt({ query: situation.slice(0, 120), resultsShown: matched });
       setResults(matched);
       setIntakeMeta(meta);
+      logSearch({
+        query: situation.slice(0, 120),
+        resultsCount: matched.length,
+        serviceTypes: matched.flatMap(s => s.type),
+      });
       localStorage.setItem("sq_results", JSON.stringify(matched));
       localStorage.setItem("sq_meta", JSON.stringify(meta));
       localStorage.removeItem("sq_qa");

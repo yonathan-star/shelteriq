@@ -27,6 +27,46 @@ function buildLocalCallScript(service, need, who, language = "en") {
   return `${opening} ${identity} ${details} ${service.noId ? "" : ""}`.trim();
 }
 
+function buildPracticalCallScript(service, need, who, language = "en") {
+  if (!service?.eligibility) return buildLocalCallScript(service, need, who, language);
+  const needLabel = need?.replaceAll("_", " ") || "shelter";
+  const facts = [
+    service.walkin ? "walk-ins are accepted" : "call-ahead may be required",
+    service.eligibility.noId ? "no ID is required" : "ask what ID or paperwork is needed",
+    service.eligibility.families ? "families may be accepted" : "ask if this placement fits your household",
+    service.eligibility.pets ? "pets may be allowed" : "ask about pet options if needed",
+    service.hours ? `hours: ${service.hours}` : null,
+  ].filter(Boolean);
+
+  if (language === "es") {
+    return [
+      `Hola, mi nombre es _____. Necesito ayuda con ${needLabel} hoy y estoy llamando para saber si ${service.name} puede aceptarme.`,
+      who === "family"
+        ? "Estoy con ninos, asi que necesito confirmar si aceptan familias y que debo llevar."
+        : "Estoy solo/a y necesito confirmar si hay espacio disponible hoy.",
+      `Antes de ir, me puede decir si debo llegar a una hora especifica, que documentos necesito y cual es el proximo paso? Datos que tengo: ${facts.join("; ")}.`,
+    ].join("\n\n");
+  }
+
+  if (language === "ht") {
+    return [
+      `Bonjou, non mwen se _____. Mwen bezwen ed ak ${needLabel} jodi a, epi mwen rele pou konnen si ${service.name} ka ede mwen.`,
+      who === "family"
+        ? "Mwen ak timoun, kidonk mwen bezwen konfime si nou aksepte fanmi ak sa mwen dwe pote."
+        : "Mwen poukont mwen epi mwen bezwen konnen si gen plas disponib jodi a.",
+      `Anvan mwen vini, eske ou ka di mwen le mwen dwe rive, ki dokiman mwen bezwen, epi ki pwochen etap la? Men sa mwen genyen: ${facts.join("; ")}.`,
+    ].join("\n\n");
+  }
+
+  return [
+    `Hi, my name is _____. I need help with ${needLabel} today, and I'm calling to see if ${service.name} can take me.`,
+    who === "family"
+      ? "I'm with children, so I need to confirm whether you accept families and what I should bring."
+      : "I'm by myself and need to confirm whether there is space or help available today.",
+    `Before I come over, can you tell me when to arrive, what documents I need, and the next step? What I know so far: ${facts.join("; ")}.`,
+  ].join("\n\n");
+}
+
 function getAreaForService(service) {
   if (!service.coords) return "unknown";
   if (service.coords.lat < 26.07) return "south";
@@ -208,7 +248,7 @@ export async function runComplexIntake(situation, language = "en", memorySummary
 // Generates a personalized call script for a specific service
 export async function generateCallScript(service, need, who, language = "en") {
   if (!import.meta.env.VITE_GEMINI_API_KEY) {
-    return buildLocalCallScript(service, need, who, language);
+    return buildPracticalCallScript(service, need, who, language);
   }
 
   const model = genAI.getGenerativeModel({
@@ -226,17 +266,23 @@ export async function generateCallScript(service, need, who, language = "en") {
 
   const lang = language === "es" ? "Spanish" : language === "ht" ? "Haitian Creole" : "English";
 
-  const prompt = `Write 2-3 sentences for someone calling ${service.name} (${service.phone}).
+  const prompt = `Write a practical phone script for someone calling ${service.name} (${service.phone}).
 They need: ${need || "shelter"}. They are: ${who === "family" ? "a parent with children" : "an individual"}.
 Service facts: ${facts}.
-Tell them exactly what to say to get help quickly. Plain language only.
+
+Return exactly 3 short paragraphs in first person:
+1. Introduce myself and say what help I need today.
+2. State my household situation and any likely barrier.
+3. Ask the worker exactly what to do next: arrival time, documents, eligibility, and whether space/help is available today.
+
+Do not invent facts. Do not sound like a chatbot. Plain, direct language.
 Respond in ${lang}.`;
 
   try {
     const result = await model.generateContent(prompt);
     return result.response.text().trim();
   } catch {
-    return buildLocalCallScript(service, need, who, language);
+    return buildPracticalCallScript(service, need, who, language);
   }
 }
 

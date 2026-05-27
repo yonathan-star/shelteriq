@@ -16,6 +16,9 @@ import {
   LocateFixed,
   Route,
   ArrowUp,
+  Bike,
+  Footprints,
+  Bus,
 } from "lucide-react";
 
 const TYPE_COLORS = {
@@ -31,6 +34,13 @@ const TYPE_COLORS = {
   family: "#1D4ED8",
   default: "#6B7280",
 };
+
+const TRAVEL_MODES = [
+  { id: "WALKING", label: "Walk", icon: Footprints },
+  { id: "BICYCLING", label: "Bike", icon: Bike },
+  { id: "DRIVING", label: "Drive", icon: CarFront },
+  { id: "TRANSIT", label: "Transit", icon: Bus },
+];
 
 function getDirectionsUrl(coords, address) {
   const dest = encodeURIComponent(address || `${coords.lat},${coords.lng}`);
@@ -112,6 +122,8 @@ export function MapView({
   const [arrived, setArrived] = useState(false);
   const [routePath, setRoutePath] = useState([]);
   const [rerouteNonce, setRerouteNonce] = useState(0);
+  const [travelMode, setTravelMode] = useState("WALKING");
+  const [navPanelOpen, setNavPanelOpen] = useState(false);
   const mapRef = useRef(null);
   const lastRerouteAtRef = useRef(0);
 
@@ -131,6 +143,7 @@ export function MapView({
     });
     setFollowMode(true);
     setArrived(false);
+    setNavPanelOpen(false);
   }, [navTarget]);
 
   useEffect(() => {
@@ -171,7 +184,7 @@ export function MapView({
       {
         origin: userCoords,
         destination: navDestination.coords,
-        travelMode: window.google.maps.TravelMode.DRIVING,
+        travelMode: window.google.maps.TravelMode[travelMode],
         provideRouteAlternatives: false,
       },
       (result, status) => {
@@ -208,7 +221,7 @@ export function MapView({
     );
 
     return () => window.clearTimeout(timeout);
-  }, [isLoaded, navDestination, rerouteNonce, userCoords]);
+  }, [isLoaded, navDestination, rerouteNonce, travelMode, userCoords]);
 
   useEffect(() => {
     if (!userCoords || navSteps.length === 0 || !navDestination?.coords) return;
@@ -239,6 +252,7 @@ export function MapView({
     setNavDestination({ name: service.name, address: service.address, coords: service.coords });
     setFollowMode(true);
     setArrived(false);
+    setNavPanelOpen(false);
   };
 
   const handleNavigateToSafeSpot = (spot) => {
@@ -247,6 +261,7 @@ export function MapView({
     setNavDestination({ name: spot.name, address: spot.address, coords: spot.coords });
     setFollowMode(true);
     setArrived(false);
+    setNavPanelOpen(false);
   };
 
   const clearNav = () => {
@@ -259,6 +274,7 @@ export function MapView({
     setActiveStepIndex(0);
     setFollowMode(true);
     setArrived(false);
+    setNavPanelOpen(false);
     onClearNavTarget?.();
   };
 
@@ -290,20 +306,50 @@ export function MapView({
       )}
 
       {isNavMode && (
-        <div className="nav-mode-shell">
+        <div className={`nav-mode-shell${navPanelOpen ? " expanded" : ""}`}>
           <div className="nav-mode-top">
             <div className="nav-mode-title-wrap">
               <span className="nav-mode-icon">
-                <CarFront size={18} />
+                {(() => {
+                  const Icon = TRAVEL_MODES.find(mode => mode.id === travelMode)?.icon || Navigation;
+                  return <Icon size={18} />;
+                })()}
               </span>
               <div className="nav-mode-copy">
-                <span className="nav-mode-kicker">Navigation Mode</span>
+                <span className="nav-mode-kicker">Navigation</span>
                 <span className="nav-mode-dest">{navDestination.name}</span>
               </div>
             </div>
+            <button
+              className="nav-panel-toggle"
+              onClick={() => setNavPanelOpen(value => !value)}
+            >
+              {navPanelOpen ? "Less" : "More"}
+            </button>
             <button className="nav-bar-close" onClick={clearNav} title="Exit navigation">
               <X size={14} />
             </button>
+          </div>
+
+          <div className="nav-mode-options">
+            {TRAVEL_MODES.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                className={`nav-mode-option${travelMode === id ? " active" : ""}`}
+                onClick={() => {
+                  setTravelMode(id);
+                  setDirections(null);
+                  setNavMeta(null);
+                  setNavSteps([]);
+                  setRoutePath([]);
+                  setNavError("");
+                  setActiveStepIndex(0);
+                }}
+              >
+                <Icon size={13} />
+                {label}
+              </button>
+            ))}
           </div>
 
           <div className="nav-mode-stats">
@@ -368,7 +414,7 @@ export function MapView({
                   </div>
                 </div>
                 {remainingSteps.length > 0 && (
-                  <div className="nav-secondary-list">
+                  <div className={`nav-secondary-list${navPanelOpen ? "" : " compact-hidden"}`}>
                     {remainingSteps.map((step, index) => (
                       <div key={`${step.instructionText}-${index}`} className="nav-secondary-item">
                         <span className="nav-secondary-num">{activeStepIndex + index + 2}</span>
