@@ -322,7 +322,11 @@ export function MapView({
     onClearNavTarget?.();
   };
 
-  const center = DEFAULT_CENTER;
+  const initialCenterRef = useRef(null);
+  if (!initialCenterRef.current) {
+    initialCenterRef.current = userCoords || DEFAULT_CENTER;
+  }
+  const center = initialCenterRef.current;
   const resultIds = new Set(results.map((s) => s.id));
   const mappable = allServices.filter((s) => s.coords);
   const isNavMode = Boolean(navDestination);
@@ -373,11 +377,7 @@ export function MapView({
           center={center}
           zoom={11}
           options={{
-            disableDefaultUI: isNavMode,
-            zoomControl: !isNavMode,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false,
+            disableDefaultUI: true,
           }}
           onLoad={(map) => {
             mapRef.current = map;
