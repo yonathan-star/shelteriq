@@ -136,6 +136,7 @@ export function MapView({
   const [routeOrigin, setRouteOrigin] = useState(null);
   const mapRef = useRef(null);
   const hasCenteredOnUserRef = useRef(false);
+  const userCoordsRef = useRef(userCoords);
   const lastRerouteAtRef = useRef(0);
   const fitRouteKeyRef = useRef("");
   const navTargetKeyRef = useRef("");
@@ -164,12 +165,16 @@ export function MapView({
     setNavPanelOpen(false);
   }, [navTarget, userCoords]);
 
+  // Keep ref in sync so onLoad closure always has latest coords
+  userCoordsRef.current = userCoords;
+
+  // Fallback: center when coords arrive after map has already loaded
   useEffect(() => {
-    if (!isLoaded || !mapRef.current || !userCoords || hasCenteredOnUserRef.current) return;
+    if (!mapRef.current || !userCoords || hasCenteredOnUserRef.current) return;
     mapRef.current.panTo(userCoords);
-    mapRef.current.setZoom(12);
+    mapRef.current.setZoom(15);
     hasCenteredOnUserRef.current = true;
-  }, [isLoaded, userCoords]);
+  }, [userCoords]);
 
   useEffect(() => {
     if (!navDestination?.coords || routeOrigin || !userCoords) return;
@@ -322,11 +327,7 @@ export function MapView({
     onClearNavTarget?.();
   };
 
-  const initialCenterRef = useRef(null);
-  if (!initialCenterRef.current) {
-    initialCenterRef.current = userCoords || DEFAULT_CENTER;
-  }
-  const center = initialCenterRef.current;
+  const center = DEFAULT_CENTER;
   const resultIds = new Set(results.map((s) => s.id));
   const mappable = allServices.filter((s) => s.coords);
   const isNavMode = Boolean(navDestination);
@@ -381,6 +382,11 @@ export function MapView({
           }}
           onLoad={(map) => {
             mapRef.current = map;
+            if (userCoordsRef.current) {
+              map.panTo(userCoordsRef.current);
+              map.setZoom(15);
+              hasCenteredOnUserRef.current = true;
+            }
           }}
           onDragStart={() => {
             if (isNavMode) setFollowMode(false);
