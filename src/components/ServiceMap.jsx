@@ -1,0 +1,25 @@
+import { useEffect,useRef,useState } from 'react';
+import Leaflet from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { services as directory } from '../data/services.js';
+import { safeSpots } from '../data/safeSpots.js';
+import { directionsUrl,phoneUrl } from '../lib/mapLinks.js';
+const copy={en:{title:'Service locations',call:'Call',directions:'Open directions',nearby:'Nearby places',confirm:'Call before traveling. A location does not confirm availability.',clear:'Clear destination'},es:{title:'Ubicaciones de servicios',call:'Llamar',directions:'Abrir direcciones',nearby:'Lugares cercanos',confirm:'Llame antes de viajar. Una ubicación no confirma disponibilidad.',clear:'Borrar destino'},ht:{title:'Kote sèvis yo ye',call:'Rele',directions:'Louvri direksyon',nearby:'Kote toupre',confirm:'Rele anvan ou deplase. Yon kote pa konfime disponiblite.',clear:'Efase destinasyon'}};
+function popup(service,L){
+  const node=document.createElement('div');node.style.whiteSpace='pre-wrap';const title=document.createElement('strong');title.textContent=service.name;node.append(title);
+  const text=document.createElement('p');text.textContent=`${service.address||''}\n${service.hours||''}\n${L.confirm}`;node.append(text);
+  const phone=phoneUrl(service.phone);if(phone){const call=document.createElement('a');call.href=phone;call.textContent=`${L.call}: ${service.phone}`;node.append(call,document.createElement('br'));}
+  const link=document.createElement('a');link.href=directionsUrl(service);link.target='_blank';link.rel='noopener noreferrer';link.textContent=L.directions;node.append(link);return node;
+}
+export function ServiceMap({services:results=[],userCoords,language='en',navTarget,onClearNavTarget}){
+  const L=copy[language]||copy.en;const container=useRef(null),map=useRef(null),group=useRef(null),location=useRef(null),located=useRef(false);
+  const [nearby,setNearby]=useState(false);const options=results.length?results:directory;
+  const signature=JSON.stringify(options.map(s=>[s.id,s.name,s.coords,s.address,s.phone,s.hours,s.publicStatus]));
+  useEffect(()=>{const instance=Leaflet.map(container.current,{scrollWheelZoom:false}).setView([26.15,-80.2],11);Leaflet.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:18}).addTo(instance);map.current=instance;group.current=Leaflet.layerGroup().addTo(instance);location.current=Leaflet.layerGroup().addTo(instance);const observer=new ResizeObserver(()=>instance.invalidateSize());observer.observe(container.current);return()=>{observer.disconnect();instance.remove();map.current=null;};},[]);
+  useEffect(()=>{if(!group.current)return;group.current.clearLayers();const services=JSON.parse(signature).map(([id,name,coords,address,phone,hours,publicStatus])=>({id,name,coords,address,phone,hours,publicStatus}));
+    for(const s of [...services.filter(s=>s.publicStatus!=='closed'),...(nearby?safeSpots:[])])if(s.coords){const marker=Leaflet.circleMarker([s.coords.lat,s.coords.lng],{radius:7,color:'#1A7A4A',fillOpacity:.8,weight:2}).bindPopup(popup(s,copy[language]||copy.en)).bindTooltip(s.name);marker.on('add',()=>{const element=marker.getElement();if(element){element.setAttribute('tabindex','0');element.setAttribute('role','button');element.setAttribute('aria-label',s.name);element.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();marker.openPopup();}});}});marker.addTo(group.current);if(s.id===navTarget?.id)marker.openPopup();}
+  },[signature,nearby,language,navTarget?.id]);
+  useEffect(()=>{if(map.current&&navTarget?.coords)map.current.setView([navTarget.coords.lat,navTarget.coords.lng],14);},[navTarget]);
+  useEffect(()=>{if(!location.current)return;location.current.clearLayers();if(userCoords){Leaflet.circleMarker([userCoords.lat,userCoords.lng],{color:'#1A4DB3',radius:8,fillOpacity:1}).bindTooltip(language==='es'?'Su ubicación':language==='ht'?'Kote ou ye':'Your location').addTo(location.current);if(!located.current&&!navTarget){map.current.setView([userCoords.lat,userCoords.lng],13);located.current=true;}}},[userCoords,language,navTarget]);
+  return <section className="hazard-panel"><h2>{L.title}</h2><p className="muted">{L.confirm}</p><label className="check-label"><input type="checkbox" checked={nearby} onChange={e=>setNearby(e.target.checked)}/>{L.nearby}</label>{navTarget&&<div className="release-card"><strong>{navTarget.name}</strong><p>{navTarget.address}</p><a href={directionsUrl(navTarget)} target="_blank" rel="noopener noreferrer">{L.directions}</a><button className="btn-reset" onClick={onClearNavTarget}>{L.clear}</button></div>}<div ref={container} className="hazard-map" aria-label={L.title}/>{options.map(s=><details className="release-card" key={s.id}><summary>{s.name}</summary><p>{s.address}</p>{phoneUrl(s.phone)&&<a href={phoneUrl(s.phone)}>{L.call}: {s.phone}</a>}{directionsUrl(s)&&<p><a href={directionsUrl(s)} target="_blank" rel="noopener noreferrer">{L.directions}</a></p>}</details>)}</section>;
+}
