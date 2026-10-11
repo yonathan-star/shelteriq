@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "map": {
+      "targetKind": "existing-ui",
+      "projectId": "e66edffe-358a-49ac-ae0c-9583f2d68331",
+      "baselineDraftId": "37650651-10eb-4c1c-9482-274dc38f5ff1",
+      "activeDraftId": "7ee30420-36d0-4b4e-998e-7dfdfa89b762",
+      "designSystemPath": ".superdesign/design-system.md",
+      "contextFiles": [
+        "src/components/HazardMap.jsx",
+        "src/App.jsx",
+        "src/components/LanguageToggle.jsx",
+        "src/styles/global.css:1:205",
+        "src/styles/global.css:2339:2355",
+        ".superdesign/design-system.md",
+        "src/components/PreventionIntake.jsx",
+        "src/components/ActionPlan.jsx",
+        "src/components/DisasterCenter.jsx"
+      ],
+      "fingerprints": {
+        "src/components/HazardMap.jsx": "9cd43b556218124082dbd4343c4bfc1c5de737b0cba0fa1925f9031a69a3d2b7",
+        "src/App.jsx": "6327c23ad2df1f19638fa220bd6b8407e26fcd5732dd6d680e2952ceade6aef3",
+        "src/components/LanguageToggle.jsx": "ffa3698989aec89044621f9e7365158e3a926ee3e68ba046321be52670c33a5a",
+        "src/styles/global.css": "e5c7055fbc104cb8087c1ee82d3cf9612848dac630c4c542dcdf35b12d2569f5",
+        ".superdesign/design-system.md": "1a1a1c9857b49bc1facf2037ccef00508c63dc5576382be15942feb62ebe3ca3",
+        "src/components/PreventionIntake.jsx": "86e493e838ef4daa582395b3511a835245440646f79e32a0e4a079baaf8c53e5",
+        "src/components/ActionPlan.jsx": "4058514f1a2dd6c0266b87f02ea44c4c0233f5f6bee5372ac16b8e0601a34e90",
+        "src/components/DisasterCenter.jsx": "b31128b8e37e0ceef28fef69bd902be2f2f8aec0bc5c3855f5808c63b0ce505e"
+      },
+      "components": [
+        {
+          "name": "ShellHeader",
+          "id": "4ee16fe4-98d0-4d33-b994-a44b05a96095",
+          "sourcePath": "src/App.jsx"
+        }
+      ],
+      "drafts": {
+        "7ee30420-36d0-4b4e-998e-7dfdfa89b762": {
+          "title": "ShelterIQ Disaster Center - Mobile Preview",
+          "visualDirection": "Polished existing forest-green and cream mobile interface",
+          "parentDraftId": "37650651-10eb-4c1c-9482-274dc38f5ff1",
+          "currentVersion": 2
+        }
+      },
+      "approval": "pending",
+      "updatedAt": "2026-10-11T23:33:37.135Z"
+    }
+  }
+}

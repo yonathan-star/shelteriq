@@ -1,0 +1,1 @@
+ShelterIQ uses its existing text wordmark (no separate logo asset). Preserve DM Sans, dark forest green header, warm cream backgrounds, readable ink, generous rounded cards. New screens should feel as intentional as the original intake/results, with clear hierarchy and touch targets. Never imply live bed availability.
