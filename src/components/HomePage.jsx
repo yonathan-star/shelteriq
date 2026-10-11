@@ -1,4 +1,7 @@
-export function HomePage({ onUserMode, onOutreachMode }) {
+import { releaseCopy } from "../lib/releaseCopy.js";
+import { services } from "../data/services.js";
+export function HomePage({ onUserMode, onOutreachMode, onPrevention, onDisaster, onPlan, language="en" }) {
+  const L=releaseCopy(language);
   return (
     <div className="home-page">
       <div className="home-content">
@@ -9,13 +12,13 @@ export function HomePage({ onUserMode, onOutreachMode }) {
 
         <div className="home-stat-block">
           <div className="home-stat">
-            <span className="home-stat-num">2,700</span>
-            <span className="home-stat-label">people without shelter tonight</span>
+            <span className="home-stat-num">{services.length}</span>
+            <span className="home-stat-label">services in the directory</span>
           </div>
           <div className="home-stat-divider" />
           <div className="home-stat">
-            <span className="home-stat-num">930</span>
-            <span className="home-stat-label">emergency beds available</span>
+            <span className="home-stat-num">3</span>
+            <span className="home-stat-label">languages supported</span>
           </div>
         </div>
 
@@ -25,6 +28,9 @@ export function HomePage({ onUserMode, onOutreachMode }) {
         </p>
 
         <div className="home-ctas">
+          <button className="home-cta-primary" onClick={onPrevention}>{L.prevention}</button>
+          <button className="home-cta-secondary" onClick={onDisaster}>{L.disaster}</button>
+          <button className="home-cta-secondary" onClick={onPlan}>{L.plan}</button>
           <button className="home-cta-primary" onClick={onUserMode}>
             I need help finding services
           </button>

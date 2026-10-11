@@ -126,9 +126,10 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading,
       {!complex ? (
         <>
           <div className="form-group">
-            <label className="form-label">{L.need}</label>
+            <label className="form-label" htmlFor="intake-need">{L.need}</label>
             <div className="select-wrap">
               <select
+                id="intake-need"
                 className="form-select"
                 value={need}
                 onChange={e => setNeed(e.target.value)}
@@ -143,9 +144,10 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading,
           </div>
 
           <div className="form-group">
-            <label className="form-label">{L.whoLabel || L.who}</label>
+            <label className="form-label" htmlFor="intake-who">{L.whoLabel}</label>
             <div className="select-wrap">
               <select
+                id="intake-who"
                 className="form-select"
                 value={who}
                 onChange={e => setWho(e.target.value)}
@@ -159,9 +161,10 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading,
           </div>
 
           <div className="form-group">
-            <label className="form-label">{L.area}</label>
+            <label className="form-label" htmlFor="intake-area">{L.area}</label>
             <div className="select-wrap">
               <select
+                id="intake-area"
                 className="form-select"
                 value={area}
                 onChange={e => setArea(e.target.value)}
@@ -193,8 +196,9 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading,
       ) : (
         <>
           <div className="form-group">
-            <label className="form-label">{L.complexLabel}</label>
+            <label className="form-label" htmlFor="intake-situation">{L.complexLabel}</label>
             <textarea
+              id="intake-situation"
               className="form-textarea"
               rows={5}
               placeholder={L.complexPlaceholder}
@@ -223,7 +227,7 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading,
             className="btn-complex-toggle"
             onClick={() => setComplex(false)}
           >
-            ← Back to quick form
+            {language === "es" ? "← Volver al formulario rápido" : language === "ht" ? "← Retounen nan fòm rapid la" : "← Back to quick form"}
           </button>
         </>
       )}

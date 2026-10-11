@@ -1,5 +1,6 @@
 import { services } from "../data/services.js";
 import { getDistanceMiles } from "./geo.js";
+import { matchesRequirements } from "./localLookup.js";
 
 export function getServiceById(id) {
   return services.find(s => s.id === id) || null;
@@ -45,9 +46,10 @@ function buildReason(service, need, who) {
 
 export function filterServices(need, who, area, userCoords) {
   // Only exclude services that are purely outreach/mobile with no fixed location
-  const base = services.filter(s => s.coords !== null || s.type.some(t => t !== "outreach"));
+  const base = services.filter(s => s.publicStatus !== "closed").filter(s => s.coords !== null || s.type.some(t => t !== "outreach"));
 
   let filtered = base.filter(s => {
+    if (need === "shelter" && !matchesRequirements(s, "shelter")) return false;
     if (need && need !== "other") {
       if (need === "veteran" && !s.eligibility.veterans) return false;
       if (need === "youth" && s.eligibility.maxAge === null) return false;

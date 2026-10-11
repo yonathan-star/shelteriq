@@ -80,7 +80,7 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
       <div className="results-list">
         {results.map((service, i) => (
           <ServiceCard
-            key={service.id}
+            key={`${service.id}:${language}`}
             service={service}
             rank={i + 1}
             need={need}
@@ -109,13 +109,14 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
         )}
         <div className="qa-input-row">
           <input
+            aria-label={L.qaHeading}
             className="qa-input"
             value={question}
             onChange={e => setQuestion(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleAsk()}
             placeholder={L.qaPlaceholder}
           />
-          <button className="qa-submit" onClick={handleAsk} disabled={qaLoading || !question.trim()}>
+          <button aria-label={language === "es" ? "Enviar pregunta" : language === "ht" ? "Voye kesyon" : "Send question"} className="qa-submit" onClick={handleAsk} disabled={qaLoading || !question.trim()}>
             {qaLoading ? <Loader size={16} className="spin" /> : <Send size={16} />}
           </button>
         </div>

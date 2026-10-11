@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 const isSupported =
   typeof navigator !== "undefined" && !!navigator.geolocation;
 
-export function useGeolocation() {
+export function useGeolocation(enabled = false) {
   const [coords, setCoords] = useState(null);
   const [heading, setHeading] = useState(null);
   const [speed, setSpeed] = useState(null);
@@ -14,7 +14,7 @@ export function useGeolocation() {
   const [loading, setLoading] = useState(isSupported);
 
   useEffect(() => {
-    if (!isSupported) return;
+    if (!isSupported || !enabled) return;
 
     const updateFromPosition = (pos) => {
       setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -44,7 +44,7 @@ export function useGeolocation() {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
+  }, [enabled]);
 
   return { coords, heading, speed, accuracy, error, loading };
 }

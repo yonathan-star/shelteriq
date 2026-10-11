@@ -1,3 +1,6 @@
+import { CorrectionForm } from "./CorrectionForm.jsx";
+import { releaseCopy } from "../lib/releaseCopy.js";
+import { services as directory } from "../data/services.js";
 import { useState, useEffect } from "react";
 import { Clock, MapPin, Phone, Users, Loader, MessageSquare, Navigation } from "lucide-react";
 import { generateCallScript } from "../lib/gemini";
@@ -24,7 +27,10 @@ export function SkeletonCard() {
   );
 }
 
-export function ServiceCard({ service, rank, need, who, language = "en", onNavigate }) {
+export function ServiceCard({ service: result, rank, need, who, language = "en", onNavigate }) {
+  const service={...result,...directory.find(s=>s.id===result.id)};
+  const R=releaseCopy(language);
+  const [showCorrection,setShowCorrection]=useState(false);
   const [script, setScript] = useState(null);
   const [loadingScript, setLoadingScript] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -33,7 +39,7 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
   const [showCheckin, setShowCheckin] = useState(false);
   const L = t(language);
 
-  // Load availability status from crowdsourced check-ins
+  // Personal visit history, never live bed availability
   const checkinStatus = getCheckinStatus(service.id);
 
   useEffect(() => {
@@ -63,6 +69,7 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
       <div className="service-top">
         <span className={`rank-badge rank-${rank}`}>{rank}</span>
         <div style={{ flex: 1 }}>
+          {service.isDemo&&<strong className="eyebrow">Demo data</strong>}
           <h3 className="service-name">{service.name}</h3>
           {service.distance !== null && (
             <p className="service-distance">{L.miles(service.distance)}</p>
@@ -70,8 +77,8 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
         </div>
         {checkinStatus && (
           <span className={`checkin-badge checkin-${checkinStatus.status}`}>
-            {checkinStatus.status === "available" ? L.checkinAvailable
-             : checkinStatus.status === "full" ? L.checkinFull
+            {checkinStatus.status === "available" ? (language === "es" ? "Su última visita: entró" : language === "ht" ? "Dènye vizit ou: ou antre" : L.checkinAvailable)
+             : checkinStatus.status === "full" ? (language === "es" ? "Su última visita: lleno" : language === "ht" ? "Dènye vizit ou: plen" : L.checkinFull)
              : L.checkinMixed}
           </span>
         )}
@@ -116,7 +123,7 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
 
       {checkinStatus && (
         <p className="checkin-meta">
-          {L.checkinReports(checkinStatus.attempts)} · {L.checkinUpdated(checkinStatus.lastUpdated)}
+          {language === "es" ? "Guardado en este dispositivo" : language === "ht" ? "Sove sou aparèy sa a" : L.checkinReports(checkinStatus.attempts)} · {L.checkinUpdated(checkinStatus.lastUpdated)}
         </p>
       )}
 
@@ -153,7 +160,8 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
         </button>
       )}
 
-      {/* "I'm Here" check-in */}
+      <div className="directory-proof"><p>{R[service.publicStatus] || R.unknown} · v{service.version || 1}</p><p>{service.verifiedAt ? `${R.checked}: ${new Date(service.verifiedAt).toLocaleDateString()}` : R.unverified}</p>{service.sourceUrl&&<a href={service.sourceUrl} target="_blank" rel="noopener noreferrer">{R.source}</a>}<p>{service.intakeRequirements}</p><button className="btn-reset" onClick={()=>setShowCorrection(v=>!v)}>{R.report}</button>{showCorrection&&<CorrectionForm service={service} language={language} onClose={()=>setShowCorrection(false)}/>}</div>
+      {/* Personal visit history */}
       {!showCheckin ? (
         <button
           className="btn-checkin"
