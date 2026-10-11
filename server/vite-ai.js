@@ -7,6 +7,8 @@ export function privateAI(env) {
       process.env.GEMINI_API_KEY = env.GEMINI_API_KEY || "";
       process.env.GEMINI_MODEL = env.GEMINI_MODEL || "gemini-3.6-flash";
       process.env.SHELTERIQ_LOCAL_REVIEW = "true";
+      process.env.DATABASE_URL = env.DATABASE_URL || '';
+      process.env.SHELTERIQ_REVIEW_TOKEN = env.SHELTERIQ_REVIEW_TOKEN || '';
       server.middlewares.use(async (req,res,next) => {
         const path=req.url?.split("?")[0];
         if (!["/api/assist","/api/hub"].includes(path)) return next();

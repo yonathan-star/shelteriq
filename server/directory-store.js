@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { services as seed } from "../src/data/services.js";
 import { preventionPrograms } from "../src/data/prevention.js";
+import * as cloud from './cloud-store.js';
 let database;
 function db(){
   if(database)return database;
@@ -20,8 +21,9 @@ function db(){
   for(const s of [...testServices,...preventionPrograms.map(p=>({...p,kind:"prevention",version:1}))])insert.run(s.id,JSON.stringify(s),s.version);
   return database;
 }
-export function getServices(includePrograms=false){return db().prepare("SELECT record FROM services ORDER BY rowid").all().map(r=>JSON.parse(r.record)).filter(s=>includePrograms||s.kind!=="prevention");}
+export function getServices(includePrograms=false){if(process.env.DATABASE_URL)return cloud.getServices(includePrograms);return db().prepare("SELECT record FROM services ORDER BY rowid").all().map(r=>JSON.parse(r.record)).filter(s=>includePrograms||s.kind!=="prevention");}
 export function submitCorrection(input){
+  if(process.env.DATABASE_URL)return cloud.submitCorrection(input);
   const service=getServices(true).find(s=>s.id===input.serviceId); if(!service)throw new Error("Unknown service");
   const id=input.requestId||randomUUID(),now=new Date().toISOString();
   const existing=db().prepare("SELECT record FROM corrections WHERE id=?").get(id);
@@ -30,9 +32,10 @@ export function submitCorrection(input){
   db().prepare("INSERT INTO corrections VALUES(?,?,?,?,?)").run(id,service.id,JSON.stringify(record),"submitted",now);
   return {token:id,state:"submitted",baseVersion:service.version};
 }
-export function correctionQueue(){return db().prepare("SELECT record FROM corrections ORDER BY created_at DESC").all().map(r=>JSON.parse(r.record));}
-export function auditHistory(){return db().prepare("SELECT record,applied_at FROM changes ORDER BY applied_at DESC").all().map(r=>({...JSON.parse(r.record),appliedAt:r.applied_at}));}
+export function correctionQueue(){if(process.env.DATABASE_URL)return cloud.correctionQueue();return db().prepare("SELECT record FROM corrections ORDER BY created_at DESC").all().map(r=>JSON.parse(r.record));}
+export function auditHistory(){if(process.env.DATABASE_URL)return cloud.auditHistory();return db().prepare("SELECT record,applied_at FROM changes ORDER BY applied_at DESC").all().map(r=>({...JSON.parse(r.record),appliedAt:r.applied_at}));}
 export function reviewCorrection(input,actor){
+  if(process.env.DATABASE_URL)return cloud.reviewCorrection(input,actor);
   const store=db();store.exec("BEGIN IMMEDIATE");
   try{
     const row=store.prepare("SELECT record,state FROM corrections WHERE id=?").get(input.id);
@@ -57,11 +60,13 @@ export function reviewCorrection(input,actor){
   }catch(error){store.exec("ROLLBACK");throw error;}
 }
 export function recordEvent(input){
+  if(process.env.DATABASE_URL)return cloud.recordEvent(input);
   const now=new Date().toISOString();const record={id:input.id,requestedNeed:input.requestedNeed,broadArea:input.broadArea,eventType:input.eventType,barrier:input.barrier||null,resultsCount:input.resultsCount??null,referralId:input.referralId||null,serviceId:input.serviceId||null,language:input.language,occurredAt:now,isDemo:process.env.SHELTERIQ_DEMO==="true"};
   db().prepare("INSERT OR IGNORE INTO events VALUES(?,?,?)").run(record.id,JSON.stringify(record),now);
   return {accepted:true};
 }
 export function metrics(){
+  if(process.env.DATABASE_URL)return cloud.metrics();
   const since=new Date(Date.now()-90*86400000).toISOString();db().prepare("DELETE FROM events WHERE occurred_at<?").run(since);
   const demo=process.env.SHELTERIQ_DEMO==="true";
   const events=db().prepare("SELECT record FROM events WHERE occurred_at>=?").all(since).map(r=>JSON.parse(r.record)).filter(e=>e.isDemo===demo);

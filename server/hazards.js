@@ -1,3 +1,6 @@
+import { currentWeather,feedStale } from '../src/lib/hazardStatus.js';
+import { loadFeed,saveFeed } from './cloud-store.js';
+export { currentWeather } from '../src/lib/hazardStatus.js';
 const nhc = 'https://mapservices.weather.noaa.gov/tropical/rest/services/tropical/NHC_tropical_weather_summary/MapServer';
 const feeds = {
   weather: 'https://api.weather.gov/alerts/active?area=FL',
@@ -20,13 +23,12 @@ async function weatherGeometry(features){
     return coordinates.length?{...f,geometry:{type:'MultiPolygon',coordinates},properties:{...f.properties,mapBoundary:'NWS affected forecast/county zones'}}:f;
   });
 }
-export function currentWeather(features, now=Date.now()) {
-  return features.filter(f=>f.properties?.messageType!=='Cancel' && (!f.properties?.expires || Date.parse(f.properties.expires)>now));
-}
 export async function getHazards() {
   const items=await Promise.all(Object.entries(feeds).map(async ([key,url])=>{
     let entry=cache.get(key);
-    if(!entry || Date.now()-entry.attempt>300000){
+    if(!entry&&process.env.DATABASE_URL){try{entry=await loadFeed('hazards-'+key);}catch{/* Fetch official feed if cached storage is unavailable. */}}
+    const interval=['weather','earthquakes'].includes(key)?30000:120000;
+    if(!entry || Date.now()-entry.attempt>interval){
       const attempt=Date.now();
       try{
         const response=await fetch(url,{headers:{'User-Agent':'ShelterIQ (https://shelteriq-five.vercel.app)',Accept:'application/geo+json, application/json'},signal:AbortSignal.timeout(10000)});
@@ -37,9 +39,10 @@ export async function getHazards() {
         entry={data,checkedAt:new Date().toISOString(),attempt,error:null};
       }catch{entry={...entry,attempt,error:'Official feed could not be refreshed'};}
       cache.set(key,entry);
+      if(process.env.DATABASE_URL){try{await saveFeed('hazards-'+key,entry);}catch{/* Keep usable official data if cache storage fails. */}}
     }
     const features=entry.data?.features||[];
-    return [key,{features:key==='weather'?currentWeather(features):features,checkedAt:entry.checkedAt||null,error:entry.error,stale:Boolean(entry.error)||!entry.checkedAt,sourceUrl:url}];
+    return [key,{features:key==='weather'?currentWeather(features):features,checkedAt:entry.checkedAt||null,error:entry.error,stale:feedStale(entry,Date.now(),interval*3),sourceUrl:url}];
   }));
   return Object.fromEntries(items);
 }

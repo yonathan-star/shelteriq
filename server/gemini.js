@@ -42,7 +42,7 @@ function getAreaForService(service) {
   return "central";
 }
 
-const COMPLEX_PROMPT = (language = "en", memorySummary = null) => `
+const COMPLEX_PROMPT = async (language = "en", memorySummary = null) => `
 You are ShelterIQ, an AI resource navigator for people experiencing homelessness in Broward County, Florida.
 
 YOUR ONLY JOB is to match the user's situation to services from the database below. Do NOT answer off-topic questions.
@@ -81,7 +81,7 @@ CRITICAL RULES:
 - If the description is unclear, return {"type":"message","text":"One clarifying question"}
 
 AVAILABLE SERVICES (compact — use id to match):
-${JSON.stringify(getServices().filter(s=>s.publicStatus!=="closed").map(s => ({
+${JSON.stringify((await getServices()).filter(s=>s.publicStatus!=="closed").map(s => ({
   id: s.id, name: s.name, type: s.type, walkin: s.walkin,
   men: s.eligibility.men, women: s.eligibility.women, families: s.eligibility.families,
   minAge: s.eligibility.minAge, maxAge: s.eligibility.maxAge, noId: s.eligibility.noId,
@@ -92,11 +92,11 @@ ${JSON.stringify(getServices().filter(s=>s.publicStatus!=="closed").map(s => ({
 
 // Used for complex free-text situations only
 export async function runComplexIntake(situation, language = "en", memorySummary = null) {
-  if (!hasAI) return localLookup(situation, language, memorySummary, getServices());
+  if (!hasAI) return localLookup(situation, language, memorySummary, await getServices());
   try {
   const model = genAI.getGenerativeModel({
     model: MODEL,
-    systemInstruction: COMPLEX_PROMPT(language, memorySummary),
+    systemInstruction: await COMPLEX_PROMPT(language, memorySummary),
     generationConfig: { maxOutputTokens: 2048, temperature: 0.2, responseMimeType: "application/json" }
   });
 
@@ -107,10 +107,10 @@ export async function runComplexIntake(situation, language = "en", memorySummary
   if (jsonMatch) {
     const parsed = JSON.parse(jsonMatch[0]);
     if (parsed.type === "message" && typeof parsed.text === "string") return { type: "message", text: parsed.text };
-    return validateMatches(parsed, situation, language, memorySummary, getServices());
+    return validateMatches(parsed, situation, language, memorySummary, await getServices());
   }
-  return localLookup(situation, language, memorySummary, getServices());
-  } catch { return localLookup(situation, language, memorySummary, getServices()); }
+  return localLookup(situation, language, memorySummary, await getServices());
+  } catch { return localLookup(situation, language, memorySummary, await getServices()); }
 }
 
 // Generates a personalized call script for a specific service
@@ -182,7 +182,7 @@ Rules:
 // Outreach search uses directory matching when AI is unavailable.
 export async function runOutreachLookup(query, language = "en") {
   if (!hasAI) {
-    return localLookup(query, language, null, getServices());
+    return localLookup(query, language, null, await getServices());
   }
 
   const model = genAI.getGenerativeModel({
@@ -194,7 +194,7 @@ export async function runOutreachLookup(query, language = "en") {
 
   // Send only the fields needed for matching — keeps the prompt small enough
   // to fit in the free-tier context window without truncation or timeouts.
-  const compactDB = getServices().filter(s=>s.publicStatus!=="closed").map(s => ({
+  const compactDB = (await getServices()).filter(s=>s.publicStatus!=="closed").map(s => ({
     id: s.id,
     name: s.name,
     type: s.type,
@@ -225,8 +225,8 @@ ${JSON.stringify(compactDB)}`;
     const text = result.response.text().trim();
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON in outreach response");
-    return validateMatches(JSON.parse(jsonMatch[0]), query, language, null, getServices());
+    return validateMatches(JSON.parse(jsonMatch[0]), query, language, null, await getServices());
   } catch {
-    return localLookup(query, language, null, getServices());
+    return localLookup(query, language, null, await getServices());
   }
 }
