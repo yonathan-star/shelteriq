@@ -1,9 +1,10 @@
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, DirectionsRenderer, OverlayView } from "@react-google-maps/api";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { services as allServices } from "../data/services";
 import { safeSpots, SPOT_COLORS, SPOT_LABELS } from "../data/safeSpots";
 import { t } from "../lib/i18n";
 import { getDistanceMiles } from "../lib/geo";
+import { HazardMap } from './HazardMap.jsx';
 import {
   Phone,
   Clock,
@@ -88,7 +89,12 @@ function getCarIcon(googleMaps, heading) {
   };
 }
 
-export function MapView({
+export function MapView(props) {
+  const [hazards,setHazards]=useState(!props.navTarget);
+  const language=props.language||'en';
+  return <div className="hazard-map-wrapper"><div className="hazard-actions"><button onClick={()=>setHazards(true)} aria-pressed={hazards}>{language==='es'?'Desastres y alertas':language==='ht'?'Dezas ak alèt':'Disasters & alerts'}</button><button onClick={()=>setHazards(false)} aria-pressed={!hazards}>{language==='es'?'Direcciones':language==='ht'?'Direksyon':'Service directions'}</button></div>{hazards?<HazardMap language={language}/>:<ServiceMapView {...props}/>}</div>;
+}
+function ServiceMapView({
   services: results = [],
   userCoords,
   userHeading,
@@ -98,17 +104,31 @@ export function MapView({
   navTarget,
   onClearNavTarget,
 }) {
+  const [mapUnavailable, setMapUnavailable] = useState(false);
+  useEffect(() => {
+    const previous = window.gm_authFailure;
+    const handler = () => { setMapUnavailable(true); previous?.(); };
+    window.gm_authFailure = handler;
+    // Billing/configuration errors can appear after the script successfully loads.
+    const detectError = () => {
+      if (document.body.textContent.includes("This page can't load Google Maps correctly.") || document.querySelector(".gm-err-container")) setMapUnavailable(true);
+    };
+    const observer = new MutationObserver(detectError);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      if (window.gm_authFailure === handler) window.gm_authFailure = previous;
+    };
+  }, []);
   const [selected, setSelected] = useState(null);
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [showSafeSpots, setShowSafeSpots] = useState(false);
-  const [navDestination, setNavDestination] = useState(null);
+  const [navDestination, setNavDestination] = useState(() => navTarget?.coords ? { name: navTarget.name, address: navTarget.address, coords: navTarget.coords } : null);
   const [directions, setDirections] = useState(null);
   const [navMeta, setNavMeta] = useState(null);
   const [navSteps, setNavSteps] = useState([]);
   const [navError, setNavError] = useState("");
-  const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [followMode, setFollowMode] = useState(true);
-  const [arrived, setArrived] = useState(false);
   const [routePath, setRoutePath] = useState([]);
   const [rerouteNonce, setRerouteNonce] = useState(0);
   const mapRef = useRef(null);
@@ -117,20 +137,15 @@ export function MapView({
   const L = t(language);
   const spotLabels = SPOT_LABELS[language] || SPOT_LABELS.en;
 
-  const { isLoaded } = useJsApiLoader({
+  const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
   });
 
   useEffect(() => {
-    if (!navTarget?.coords) return;
-    setNavDestination({
-      name: navTarget.name,
-      address: navTarget.address,
-      coords: navTarget.coords,
-    });
-    setFollowMode(true);
-    setArrived(false);
-  }, [navTarget]);
+    if (isLoaded) return;
+    const timer = setTimeout(() => setMapUnavailable(true), 15000);
+    return () => clearTimeout(timer);
+  }, [isLoaded]);
 
   useEffect(() => {
     if (!isLoaded || !mapRef.current || !navDestination?.coords) return;
@@ -148,16 +163,11 @@ export function MapView({
 
   useEffect(() => {
     if (!isLoaded || !userCoords || !navDestination?.coords) {
-      setDirections(null);
-      setNavMeta(null);
-      setNavSteps([]);
-      setRoutePath([]);
-      setActiveStepIndex(0);
-      setNavError(navDestination?.coords && !userCoords ? "Turn on location to use in-app navigation." : "");
       return;
     }
 
     const svc = new window.google.maps.DirectionsService();
+    let active = true;
     const timeout = window.setTimeout(() => {
       setDirections(null);
       setNavMeta(null);
@@ -174,6 +184,7 @@ export function MapView({
         provideRouteAlternatives: false,
       },
       (result, status) => {
+        if (!active) return;
         window.clearTimeout(timeout);
         if (status !== "OK" || !result) {
           setDirections(null);
@@ -201,34 +212,23 @@ export function MapView({
         });
         setNavSteps(steps);
         setRoutePath(result.routes[0]?.overview_path?.map(latLngToCoords) || []);
-        setActiveStepIndex(0);
         setNavError("");
       }
     );
 
-    return () => window.clearTimeout(timeout);
+    return () => { active = false; window.clearTimeout(timeout); };
   }, [isLoaded, navDestination, rerouteNonce, userCoords]);
 
   useEffect(() => {
     if (!userCoords || navSteps.length === 0 || !navDestination?.coords) return;
-
-    const destinationDistance = getDistanceMiles(userCoords, navDestination.coords);
-    setArrived(destinationDistance < 0.05);
-
-    let nextIndex = navSteps.length - 1;
-    for (let i = 0; i < navSteps.length; i += 1) {
-      if (getDistanceMiles(userCoords, navSteps[i].endCoords) > 0.03) {
-        nextIndex = i;
-        break;
-      }
-    }
-    setActiveStepIndex(nextIndex);
-
     const routeOffset = getMinDistanceToPathMiles(userCoords, routePath);
     const now = Date.now();
     if (routeOffset > 0.08 && now - lastRerouteAtRef.current > 8000) {
-      lastRerouteAtRef.current = now;
-      setRerouteNonce((value) => value + 1);
+      const timer = window.setTimeout(() => {
+        lastRerouteAtRef.current = Date.now();
+        setRerouteNonce((value) => value + 1);
+      }, 250);
+      return () => window.clearTimeout(timer);
     }
   }, [navDestination, navSteps, routePath, userCoords]);
 
@@ -237,7 +237,6 @@ export function MapView({
     setSelectedSpot(null);
     setNavDestination({ name: service.name, address: service.address, coords: service.coords });
     setFollowMode(true);
-    setArrived(false);
   };
 
   const handleNavigateToSafeSpot = (spot) => {
@@ -245,7 +244,6 @@ export function MapView({
     setSelectedSpot(null);
     setNavDestination({ name: spot.name, address: spot.address, coords: spot.coords });
     setFollowMode(true);
-    setArrived(false);
   };
 
   const clearNav = () => {
@@ -255,9 +253,7 @@ export function MapView({
     setNavSteps([]);
     setNavError("");
     setRoutePath([]);
-    setActiveStepIndex(0);
     setFollowMode(true);
-    setArrived(false);
     onClearNavTarget?.();
   };
 
@@ -265,11 +261,27 @@ export function MapView({
   const resultIds = new Set(results.map((s) => s.id));
   const mappable = allServices.filter((s) => s.coords);
   const isNavMode = Boolean(navDestination);
+  const arrived = Boolean(userCoords && navDestination?.coords && getDistanceMiles(userCoords, navDestination.coords) < 0.05);
+  const nextIndex = userCoords ? navSteps.findIndex(step => getDistanceMiles(userCoords, step.endCoords) > 0.03) : 0;
+  const activeStepIndex = nextIndex < 0 ? Math.max(0, navSteps.length - 1) : nextIndex;
+  const displayNavError = navDestination && !userCoords ? "Turn on location to use in-app navigation." : navError;
   const activeStep = navSteps[activeStepIndex] || null;
   const remainingSteps = navSteps.slice(activeStepIndex + 1, activeStepIndex + 4);
   const speedMph = Number.isFinite(userSpeed) ? Math.max(0, userSpeed * 2.23694) : null;
 
-  if (!isLoaded) return <div className="map-loading">Loading map...</div>;
+  if (mapUnavailable || loadError) {
+    const options = navTarget ? [navTarget] : results.length ? results : allServices;
+    return <div className="map-fallback">
+      <h2>{language === "es" ? "El mapa no está disponible" : language === "ht" ? "Kat la pa disponib" : "Map unavailable"}</h2>
+      <p>{language === "es" ? "Use las direcciones y los enlaces para llegar. Llame antes de viajar." : language === "ht" ? "Sèvi ak adrès ak lyen yo. Rele anvan ou deplase." : "Use these addresses and directions links. Call before traveling."}</p>
+      {options.map(s => <div className="map-fallback-card" key={s.id}>
+        <h3>{s.name}</h3><p>{s.address}</p>
+        <a href={`tel:${s.phone}`}>{language === "es" ? "Llamar" : language === "ht" ? "Rele" : "Call"}: {s.phone}</a>
+        {s.coords && <a href={getDirectionsUrl(s.coords,s.address)} target="_blank" rel="noopener noreferrer">{language === "es" ? "Abrir direcciones" : language === "ht" ? "Louvri direksyon" : "Open directions"}</a>}
+      </div>)}
+    </div>;
+  }
+  if (!isLoaded) return <div className="map-loading">{language === "es" ? "Cargando mapa..." : language === "ht" ? "Kat la ap chaje..." : "Loading map..."}</div>;
 
   const circle = window.google.maps.SymbolPath.CIRCLE;
 
@@ -308,11 +320,11 @@ export function MapView({
           <div className="nav-mode-stats">
             <span className="nav-mode-stat">
               <Route size={14} />
-              {navMeta ? `${navMeta.distance} route` : "Finding route"}
+              {navMeta ? `${navMeta.distance} route` : displayNavError ? "Route unavailable" : "Finding route"}
             </span>
             <span className="nav-mode-stat">
               <Clock size={14} />
-              {arrived ? "Arrived" : navMeta ? navMeta.duration : "Estimating ETA"}
+              {arrived ? "Arrived" : navMeta ? navMeta.duration : displayNavError ? "Use directions link" : "Estimating ETA"}
             </span>
             {speedMph !== null && (
               <span className="nav-mode-stat">
@@ -335,9 +347,9 @@ export function MapView({
           </div>
 
           <div className="nav-mode-body">
-            {navError ? (
+            {displayNavError ? (
               <div className="nav-mode-error">
-                <p>{navError}</p>
+                <p>{displayNavError}</p>
                 <a
                   href={getDirectionsUrl(navDestination.coords, navDestination.address)}
                   target="_blank"

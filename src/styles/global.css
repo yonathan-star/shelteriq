@@ -2304,3 +2304,46 @@ header > div:first-child { min-width: 0; }
 
   .home-page { max-width: 430px; margin: 0 auto; }
 }
+
+.search-notice { padding: 12px 16px; margin: 12px 16px; background: var(--green-50); color: var(--ink-700); border-radius: 10px; font-size: 14px; line-height: 1.5; }
+.map-fallback { overflow-y: auto; height: 100%; padding: 20px; }
+.map-fallback-card { padding: 16px 0; border-bottom: 1px solid var(--ink-100); }
+.map-fallback-card a { display: inline-block; margin: 8px 16px 0 0; color: var(--green-700); }
+
+/* Release features reuse the existing ShelterIQ palette and phone-first shell. */
+.nav-tabs {overflow-x:auto;flex-shrink:0;gap:8px;} .nav-tab {white-space:nowrap;flex:0 0 auto;min-width:64px;}
+.logo-home {border:0;background:none;color:inherit;text-align:left;padding:0;cursor:pointer;}
+.release-panel {padding:24px 20px;color:var(--ink-900);line-height:1.55;}
+.release-panel h2 {font-size:25px;margin:8px 0 12px;} .release-panel h3 {font-size:18px;margin:12px 0 8px;}
+.release-panel p,.directory-proof p {margin:10px 0;}
+.release-panel label,.correction-form label {display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600;margin:16px 0;}
+.release-panel select,.release-panel input:not([type=checkbox]),.release-panel textarea,.correction-form select,.correction-form input,.correction-form textarea {width:100%;border:1px solid var(--ink-300);border-radius:9px;padding:12px;background:white;color:var(--ink-900);font:inherit;box-sizing:border-box;}
+.release-panel textarea,.correction-form textarea{min-height:80px;}
+.release-panel .check-label {flex-direction:row;align-items:flex-start;font-weight:400;gap:10px;}
+.check-label input{width:18px;height:18px;flex-shrink:0;accent-color:var(--green-600);}
+.release-card {padding:18px;margin:18px 0;background:var(--white);border:1px solid var(--ink-100);border-radius:14px;}
+.release-card a,.release-panel>a,.directory-proof a {color:var(--green-700);text-decoration:underline;overflow-wrap:anywhere;}
+.eyebrow {font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--green-700);}
+.muted {font-size:12px;color:var(--ink-500);} .official-text {white-space:pre-wrap;}
+.directory-proof {font-size:12px;border-top:1px solid var(--ink-100);margin-top:14px;padding-top:8px;}
+.correction-form {padding:12px;background:var(--green-50);border-radius:10px;} .correction-form code{overflow-wrap:anywhere;}
+.review-entry {border:0;background:var(--green-50);color:var(--green-700);padding:14px;cursor:pointer;width:100%;}
+.reminder-form {border-top:1px solid var(--ink-100);margin-top:12px;} .reminder-row{font-size:12px;}
+.release-panel table {width:100%;border-collapse:collapse;font-size:13px;} .release-panel th,.release-panel td {text-align:left;padding:10px;border-bottom:1px solid var(--ink-100);}
+:focus-visible {outline:3px solid var(--green-400);outline-offset:3px;}
+.release-panel .btn-mode,.correction-form .btn-mode {color:var(--green-900);background:var(--green-100);border:1px solid var(--green-400);font-weight:600;padding:10px 14px;}
+.release-panel .btn-mode:disabled,.correction-form .btn-mode:disabled {opacity:.45;cursor:not-allowed;}
+.nav-tabs {gap:2px;scrollbar-width:none;} .nav-tabs::-webkit-scrollbar{display:none;}
+.nav-tabs .nav-tab {min-width:48px;padding:12px 10px;font-size:12px;}
+.reminder-form summary {color:var(--green-700);cursor:pointer;padding:12px 0;font-weight:600;}
+.hazard-map-wrapper { width:100%; height:100%; overflow:auto; }
+.hazard-panel { padding:12px; color:var(--text-primary,#173c2b); }
+.hazard-panel h2 { font-size:20px; margin:6px 0 12px; }
+.hazard-controls { display:grid; gap:8px; font-size:13px; }
+.hazard-controls label { display:flex; align-items:center; gap:8px; }
+.hazard-actions { display:flex; flex-wrap:wrap; gap:6px; padding:8px; }
+.hazard-actions button { border:1px solid #9db6a7; border-radius:8px; padding:8px 12px; background:#f3f8f4; color:#173c2b; cursor:pointer; }
+.hazard-actions button[aria-pressed=true] { background:#166534; color:white; }
+.hazard-map { height:390px; min-height:300px; width:100%; border-radius:12px; z-index:0; }
+.hazard-legend,.hazard-sources { font-size:11px; line-height:1.6; }
+.hazard-panel .leaflet-popup-content { white-space:pre-wrap; }

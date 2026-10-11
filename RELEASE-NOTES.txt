@@ -1,0 +1,48 @@
+ShelterIQ local release — October 11, 2026
+
+Run with Node.js 22.13 or newer:
+  npm install
+  npm run dev -- --host 127.0.0.1
+
+Private Gemini configuration is in the ignored .env.local file under
+GEMINI_API_KEY. Do not use a VITE_ prefix for this secret. The frontend calls
+/api/assist; the key remains on the server. Maps configuration is separate.
+
+Implemented first-release features:
+- Versioned shared directory with source metadata and explicit unverified status.
+- Broward prevention intake, local editable plans, and provider-source links.
+- Explicitly opted-in local reminders and neutral calendar downloads.
+- Official NWS alerts with caching, original instructions, and failure/stale states.
+- Manually sourced storm-site snapshots that expire to unknown; county links
+  remain the authority for complete current shelter activation information.
+- Pending correction reports, owner review, transactional approval, version
+  conflicts, and an authenticated audit endpoint.
+- Structured request metrics; small cells and inferable denominators are hidden.
+
+The directory database persists in .data/directory.sqlite. This directory is
+ignored by Git and blocked from browser access. Do not delete it casually:
+it holds reviewed corrections, audit history, and recorded structured activity.
+Plans and reminder preferences are stored on the visitor's device. Calendar
+reminders are managed by the visitor's calendar app. In-app reminders require
+ShelterIQ to be open. Push, SMS/email, provider onboarding, and cloud accounts
+remain outside this reviewed first-release scope.
+
+Owner review is intentionally available only on the loopback local development
+server. Public deployment requires a hosted persistent directory store and
+real reviewer authentication. The app refuses to silently use an ephemeral
+Vercel filesystem as a persistent directory. SHELTERIQ_DB_PATH is for durable
+local/self-hosted storage, not a Vercel persistence workaround.
+
+Checks:
+  npm run lint
+  node --test scripts/test-functional.mjs scripts/test-private-ai.mjs scripts/test-release.mjs
+  npm run build
+
+The release suite uses an isolated in-memory database and fictional providers.
+Browser QA used a separate staging database and port 5174, with SHELTERIQ_DEMO
+enabled. Those reports and events do not enter the normal directory or totals.
+Current program openings, the remaining legacy directory records, and
+consequential Spanish/Haitian Creole wording need partner/human verification
+before a public pilot. No provider partnership is implied by a directory entry.
+
+Disaster map: Leaflet/OpenStreetMap base map, all active NWS Florida alert types with available alert/affected-zone boundaries, NHC forecast tracks/cones/current positions, and USGS worldwide M4.5+ earthquakes from the past 7 days. Each feed reports refresh failures and source timestamps. These feeds do not provide every disaster globally or confirm that an area is safe. Service pins do not confirm shelter activation or beds. Use Disaster help > View disasters & alerts on the map, or the Map tab.

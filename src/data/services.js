@@ -1,4 +1,4 @@
-export const services = [
+export const legacyServices = [
   {
     id: "broward-partnership-central",
     name: "Broward Partnership — Central Homeless Assistance Center",
@@ -480,3 +480,5 @@ export const services = [
     lastVerified: "2026-05-01"
   }
 ];
+
+export const services = legacyServices.map(s => ({ ...s, version: 1, sourceUrl: s.website || null, verifiedAt: null, verificationState: "needs_review", publicStatus: "unknown", documents: [], intakeRequirements: s.walkin ? "Call to confirm walk-in intake and required documents." : "Call to confirm referral requirements before traveling." }));
