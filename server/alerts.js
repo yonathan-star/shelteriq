@@ -8,7 +8,7 @@ export function activeAlerts(features,now=Date.now()){
   });
 }
 export async function getAlerts(){
-  if(!cache.lastAttempt||Date.now()-Date.parse(cache.lastAttempt)>300000){
+  if(!cache.lastAttempt||Date.now()-Date.parse(cache.lastAttempt)>30000){
     cache.lastAttempt=new Date().toISOString();
     try{
       const response=await fetch(source,{headers:{"User-Agent":"ShelterIQ (https://shelteriq-five.vercel.app)",Accept:"application/geo+json"},signal:AbortSignal.timeout(8000)});
@@ -17,6 +17,6 @@ export async function getAlerts(){
       cache={...cache,items:activeAlerts(data.features),lastSuccessfulRefresh:new Date().toISOString(),error:null};
     }catch{cache.error="Could not refresh official alerts";}
   }
-  const items=cache.items.filter(p=>!p.expires||Date.parse(p.expires)>Date.now());
-  return {...cache,items,sourceUrl:source,area:"Broward County",stale:Boolean(cache.error)||!cache.lastSuccessfulRefresh||Date.now()-Date.parse(cache.lastSuccessfulRefresh)>900000};
+  const items=cache.items.filter(p=>(!p.expires||Date.parse(p.expires)>Date.now()));
+  return {...cache,items,sourceUrl:source,area:"Broward County",stale:Boolean(cache.error)||!cache.lastSuccessfulRefresh||Date.now()-Date.parse(cache.lastSuccessfulRefresh)>120000};
 }

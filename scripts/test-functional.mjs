@@ -3,6 +3,15 @@ import assert from "node:assert/strict";
 import { localLookup, localAnswer, validateMatches } from "../src/lib/localLookup.js";
 import { services } from "../src/data/services.js";
 import { recordCheckin, getCheckinStatus } from "../src/lib/checkin.js";
+import { currentWeather,feedStale } from '../src/lib/hazardStatus.js';
+test('live weather retires superseded alerts and marks old feeds stale',()=>{
+  const now=Date.parse('2026-10-11T23:00:00Z');
+  const features=[{id:'old',properties:{id:'old',expires:'2026-10-12T00:00:00Z'}},{id:'new',properties:{messageType:'Update',references:[{identifier:'old'}],expires:'2026-10-12T00:00:00Z'}},{id:'ended',properties:{ends:'2026-10-11T22:59:00Z'}}];
+  assert.deepEqual(currentWeather(features,now).map(f=>f.id),['new']);
+  assert.equal(feedStale({checkedAt:'2026-10-11T22:57:00Z'},now),true);
+  assert.equal(feedStale({checkedAt:'2026-10-11T22:59:30Z'},now),false);
+  assert.equal(feedStale({checkedAt:'2026-10-11T22:59:30Z',error:'Unavailable'},now),true);
+});
 const byId = id => services.find(s => s.id === id);
 test("directory fallback honors children, ID and age requirements", () => {
   const result = localLookup("A 35 years old parent with children needs shelter without ID.");

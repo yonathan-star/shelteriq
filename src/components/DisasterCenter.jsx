@@ -7,8 +7,8 @@ export function DisasterCenter({language,onOpenMap}){
   const L=releaseCopy(language);const [data,setData]=useState(()=>{try{return JSON.parse(localStorage.getItem("sq_alerts")||"null");}catch{return null;}}),[loading,setLoading]=useState(false),[error,setError]=useState(false),[now,setNow]=useState(()=>Date.now()),[onlyOpen,setOnlyOpen]=useState(false),[saved,setSaved]=useState(false);
   useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(timer);},[]);
   async function refresh(){setLoading(true);try{const result=await hub("alerts");setData(result);setError(Boolean(result.error));localStorage.setItem("sq_alerts",JSON.stringify(result));}catch{setError(true);}finally{setLoading(false);}}
-  useEffect(()=>{let active=true;hub("alerts").then(result=>{if(active){setData(result);setError(Boolean(result.error));localStorage.setItem("sq_alerts",JSON.stringify(result));}}).catch(()=>{if(active)setError(true);});return()=>{active=false;};},[]);
-  const stale=error||data?.stale||!data?.lastSuccessfulRefresh||now-Date.parse(data.lastSuccessfulRefresh)>900000;
+  useEffect(()=>{let active=true;const update=()=>hub("alerts").then(result=>{if(active){setData(result);setError(Boolean(result.error));localStorage.setItem("sq_alerts",JSON.stringify(result));}}).catch(()=>{if(active)setError(true);});update();const timer=setInterval(update,60000);return()=>{active=false;clearInterval(timer);};},[]);
+  const stale=error||data?.stale||!data?.lastSuccessfulRefresh||now-Date.parse(data.lastSuccessfulRefresh)>120000;
   const items=(data?.items||[]).filter(a=>!a.expires||Date.parse(a.expires)>now);
   return <section className="release-panel"><p className="eyebrow">Broward County · NWS</p><h2>{L.disaster}</h2>{onOpenMap&&<button className="btn-submit" onClick={onOpenMap}>{language==='es'?'Ver desastres y alertas en el mapa':language==='ht'?'Gade dezas ak alèt sou kat la':'View disasters & alerts on the map'}</button>}<button className="btn-mode" disabled={loading} onClick={refresh}>{L.refresh}</button>
     <h3>{L.alerts}</h3>{error&&<p className="search-notice" role="alert">{L.failed}</p>}{stale&&data&&<p>{L.stale}</p>}
