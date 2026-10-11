@@ -3,6 +3,8 @@ import { hub } from "../lib/serviceRepository.js";
 import { releaseCopy } from "../lib/releaseCopy.js";
 import { disasterSites,siteState } from "../data/disasterSites.js";
 import { appendPlanSteps } from "../lib/plans.js";
+import { CloudLightning,MapPinned,RefreshCw,ArrowUpRight } from 'lucide-react';
+import { FeatureHeader } from './FeatureHeader.jsx';
 export function DisasterCenter({language,onOpenMap}){
   const L=releaseCopy(language);const [data,setData]=useState(()=>{try{return JSON.parse(localStorage.getItem("sq_alerts")||"null");}catch{return null;}}),[loading,setLoading]=useState(false),[error,setError]=useState(false),[now,setNow]=useState(()=>Date.now()),[onlyOpen,setOnlyOpen]=useState(false),[saved,setSaved]=useState(false);
   useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(timer);},[]);
@@ -10,8 +12,8 @@ export function DisasterCenter({language,onOpenMap}){
   useEffect(()=>{let active=true;const update=()=>hub("alerts").then(result=>{if(active){setData(result);setError(Boolean(result.error));localStorage.setItem("sq_alerts",JSON.stringify(result));}}).catch(()=>{if(active)setError(true);});update();const timer=setInterval(update,60000);return()=>{active=false;clearInterval(timer);};},[]);
   const stale=error||data?.stale||!data?.lastSuccessfulRefresh||now-Date.parse(data.lastSuccessfulRefresh)>120000;
   const items=(data?.items||[]).filter(a=>!a.expires||Date.parse(a.expires)>now);
-  return <section className="release-panel"><p className="eyebrow">Broward County · NWS</p><h2>{L.disaster}</h2>{onOpenMap&&<button className="btn-submit" onClick={onOpenMap}>{language==='es'?'Ver desastres y alertas en el mapa':language==='ht'?'Gade dezas ak alèt sou kat la':'View disasters & alerts on the map'}</button>}<button className="btn-mode" disabled={loading} onClick={refresh}>{L.refresh}</button>
-    <h3>{L.alerts}</h3>{error&&<p className="search-notice" role="alert">{L.failed}</p>}{stale&&data&&<p>{L.stale}</p>}
+  return <section className="release-panel disaster-panel"><FeatureHeader icon={CloudLightning} eyebrow="Broward County · NWS" title={L.disaster}><p>{language==='es'?'Información oficial para su próximo paso.':language==='ht'?'Enfòmasyon ofisyèl pou pwochen etap ou.':'Official information for your next step.'}</p></FeatureHeader>{onOpenMap&&<button className="disaster-map-entry" onClick={onOpenMap}><span className="map-entry-icon"><MapPinned size={26}/></span><span><strong>{language==='es'?'Ver el mapa de alertas':language==='ht'?'Gade kat alèt la':'Explore the alert map'}</strong><small>{language==='es'?'Florida · Panhandle · Tormentas':language==='ht'?'Florid · Panhandle · Tanpèt':'Florida · Panhandle · Storms'}</small></span><ArrowUpRight size={19}/></button>}<div className="section-bar"><h3>{L.alerts}</h3><button className="icon-refresh" aria-label={L.refresh} disabled={loading} onClick={refresh}><RefreshCw size={17} className={loading?'spin':''}/></button></div>
+    {error&&<p className="search-notice" role="alert">{L.failed}</p>}{stale&&data&&<p>{L.stale}</p>}
     {!error&&!stale&&items.length===0&&<p>{L.noAlerts} {new Date(data.lastSuccessfulRefresh).toLocaleString()}</p>}
     {data?.lastSuccessfulRefresh&&<p className="muted">{L.checked}: {new Date(data.lastSuccessfulRefresh).toLocaleString()}</p>}
     {items.map(a=><article className="release-card" key={a.id}><p className="eyebrow">{a.severity} · {a.urgency} · {a.certainty}</p><h3>{a.headline||a.event}</h3><p>{a.area}</p><p className="muted">{a.effective} → {a.expires}</p><details><summary>{L.original}</summary><p className="official-text">{a.instruction||a.description}</p><p>{L.translations}</p></details><a href={a.sourceUrl} target="_blank" rel="noopener noreferrer">{L.source}</a></article>)}

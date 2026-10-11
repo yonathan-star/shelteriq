@@ -5,6 +5,7 @@ import { ProviderReviewQueue } from "./components/ProviderReviewQueue";
 import { refreshServices, logRequest } from "./lib/serviceRepository";
 import { releaseCopy } from "./lib/releaseCopy";
 import { useEffect, useState } from "react";
+import { LocateFixed } from 'lucide-react';
 import { IntakeForm } from "./components/IntakeForm";
 import { ResultsPanel } from "./components/ResultsPanel";
 import { MapView } from "./components/MapView";
@@ -43,7 +44,7 @@ export default function App() {
   const [searchMessage, setSearchMessage] = useState("");
   const [crisis, setCrisis] = useState(null); // { type, situation }
   const [locationEnabled,setLocationEnabled]=useState(false);
-  const { coords, heading, speed, accuracy } = useGeolocation(locationEnabled);
+  const { coords, heading, speed, accuracy,error:locationError } = useGeolocation(locationEnabled);
 
   const setStandardView = (nextView) => {
     setLastStandardView(nextView);
@@ -253,7 +254,8 @@ export default function App() {
         )}
         {view === "map" && (
           <div className="tab-content map-panel">
-            {!locationEnabled&&<button className="review-entry" onClick={()=>setLocationEnabled(true)}>{language==="es"?"Usar mi ubicación":language==="ht"?"Sèvi ak kote mwen ye":"Use my location"}</button>}
+            {!locationEnabled&&<button className="map-location-prompt" aria-label={language==="es"?"Usar mi ubicación":language==="ht"?"Sèvi ak kote mwen ye":"Use my location"} title={language==="es"?"Usar mi ubicación":language==="ht"?"Sèvi ak kote mwen ye":"Use my location"} onClick={()=>setLocationEnabled(true)}><LocateFixed size={17}/></button>}
+            {locationEnabled&&locationError&&<p className="location-notice" role="status">{language==='es'?'Ubicación no disponible. Puede explorar el mapa.':language==='ht'?'Kote ou ye pa disponib. Ou ka eksplore kat la.':'Location unavailable. You can still explore the map.'}</p>}
             <MapView
               services={results.length > 0 ? results : []}
               userCoords={coords}
