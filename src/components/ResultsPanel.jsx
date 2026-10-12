@@ -97,6 +97,7 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
 
       <div className="qa-section">
         <h3 className="qa-heading">{L.qaHeading}</h3>
+        {results.some(s=>s.verificationState!=='verified')&&<p className="muted">{uiCopy(language).unverified}</p>}
         {qaHistory.length > 0 && (
           <div className="qa-history">
             {qaHistory.map((msg, i) => (

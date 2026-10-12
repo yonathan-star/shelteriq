@@ -1,5 +1,6 @@
 import { safeCallScript } from '../src/lib/callScript.js';
 import { checkRate } from './cloud-store.js';
+import { reviewedServiceFacts } from './reviewed-service-facts.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getServices } from "./directory-store.js";
 import { localLookup, localAnswer, validateMatches } from "../src/lib/localLookup.js";
@@ -110,10 +111,7 @@ export async function answerFollowUp(question, matchedServices, language = "en")
     generationConfig: { maxOutputTokens: 2048, temperature: 0.2 }
   });
 
-  const summary = matchedServices.map(s => ({
-    name: s.name, phone: s.phone, hours: s.hours,
-    walkin: s.walkin, address: s.address, eligibility: s.eligibility,
-  }));
+  const summary = matchedServices.map(reviewedServiceFacts);
 
   const prompt = `You are ShelterIQ, a resource navigator for Broward County homeless services.
 The user has been matched to these services:
@@ -123,6 +121,9 @@ User question: "${question}"
 
 Rules:
 - Answer ONLY from the data above
+- Only verifiedFacts may support factual claims. directoryPhone is an unverified directory contact unless phone also appears in verifiedFacts; explain that distinction when relevant.
+- Never claim current bed availability or invent caller details. Unknown eligibility, ID, pets, and intake hours must be confirmed directly with the provider.
+- Never tell someone they can skip confirming intake before traveling.
 - If the answer isn't in the data, say: "I don't have that info — call [most relevant phone number]"
 - Under 60 words
 - Respond in ${language === "es" ? "Spanish" : language === "ht" ? "Haitian Creole" : "English"}`;

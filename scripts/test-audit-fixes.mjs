@@ -6,6 +6,7 @@ import { constrainResults } from '../src/lib/searchConstraints.js';
 import { signActivity,readActivity } from '../server/activity-receipt.js';
 import { localStore } from '../src/lib/storage.js';
 import { loadPlan } from '../src/lib/plans.js';
+import { reviewedServiceFacts } from '../server/reviewed-service-facts.js';
 process.env.SHELTERIQ_DB_PATH=':memory:';
 const { POST:assist }=await import('../api/assist.js');
 const { POST:hub }=await import('../api/hub.js');
@@ -38,4 +39,8 @@ test('privacy clearing preserves unrelated storage and blocked storage does not 
  Object.defineProperty(globalThis,'localStorage',{value:fixture,configurable:true});
  try{assert.equal(localStore.setItem('sq_results','x'),false);localStore.clearShelterIQ();assert.equal(fixture.sq_results,undefined);assert.equal(fixture.sq_plan_v1,undefined);assert.equal(fixture.unrelated,'keep');fixture.sq_plan_v1=JSON.stringify({id:'bad',steps:{},reminders:[]});assert.equal(loadPlan(),null);}
  finally{if(previous)Object.defineProperty(globalThis,'localStorage',previous);else delete globalThis.localStorage;}
+});
+test('AI follow-up grounding excludes unreviewed eligibility and capacity',()=>{
+ const summary=reviewedServiceFacts({name:'Test',phone:'123',beds:80,eligibility:{noId:true,minAge:18},fieldVerification:{'eligibility.minAge':{verifiedAt:'2026-10-12'}}});
+ assert.deepEqual(summary.verifiedFacts,{'eligibility.minAge':18});assert.equal(summary.beds,undefined);
 });
