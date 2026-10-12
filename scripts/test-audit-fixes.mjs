@@ -8,6 +8,7 @@ import { localStore } from '../src/lib/storage.js';
 import { loadPlan } from '../src/lib/plans.js';
 import { reviewedServiceFacts } from '../server/reviewed-service-facts.js';
 import { displayServiceReason,uiCopy } from '../src/lib/uiCopy.js';
+import { validateMatches } from '../src/lib/localLookup.js';
 process.env.SHELTERIQ_DB_PATH=':memory:';
 const { POST:assist }=await import('../api/assist.js');
 const { POST:hub }=await import('../api/hub.js');
@@ -49,5 +50,10 @@ test('stale or differently translated cached reasons do not contradict current f
  const result={version:1,reason:'Walk-ins accepted',reasonLanguage:'en'};
  assert.equal(displayServiceReason(result,{version:2},'en'),uiCopy('en').match);
  assert.equal(displayServiceReason(result,{version:1},'es'),uiCopy('es').match);
- assert.equal(displayServiceReason(result,{version:1},'en'),result.reason);
+ assert.equal(displayServiceReason(result,{version:1,verificationState:'verified'},'en'),result.reason);
+ assert.equal(displayServiceReason(result,{version:1,verificationState:'needs_review'},'en'),uiCopy('en').match);
+});
+test('AI ranking explanations cannot assert unchecked beds or intake privileges',()=>{
+ const result=validateMatches({type:'results',matches:['salvation-army-fort-lauderdale'],reasons:{'salvation-army-fort-lauderdale':'Guaranteed beds; no ID and no referral needed'}},'shelter','en');
+ assert.doesNotMatch(result.data.reasons['salvation-army-fort-lauderdale'],/guaranteed|no ID|no referral/i);
 });
