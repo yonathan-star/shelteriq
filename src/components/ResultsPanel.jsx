@@ -1,3 +1,6 @@
+import { uiCopy } from '../lib/uiCopy.js';
+import { detectCrisis } from '../lib/crisis.js';
+import { localStore as localStorage } from '../lib/storage.js';
 import { useState } from "react";
 import { House, Phone, Send, Loader, Map } from "lucide-react";
 import { ServiceCard, SkeletonCard } from "./ServiceCard";
@@ -5,16 +8,17 @@ import { MemoryBanner } from "./MemoryBanner";
 import { answerFollowUp } from "../lib/gemini";
 import { t } from "../lib/i18n";
 
-export function ResultsPanel({ results, onReset, language, loading = false, need, who, onSuggestNext, onViewMap, onNavigateService }) {
+export function ResultsPanel({ results, onReset, language, loading = false, need, who, onSuggestNext, onViewMap, onNavigateService, onCrisisDetected }) {
   const L = t(language);
   const [question, setQuestion] = useState("");
   const [qaHistory, setQaHistory] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("sq_qa") || "[]"); } catch { return []; }
+    try { const value=JSON.parse(localStorage.getItem("sq_qa") || "[]");return Array.isArray(value)?value.filter(x=>x&&["user","ai"].includes(x.role)&&typeof x.text==="string"):[]; } catch { return []; }
   });
   const [qaLoading, setQaLoading] = useState(false);
 
   const handleAsk = async () => {
     if (!question.trim() || qaLoading) return;
+    const crisis=detectCrisis(question);if(crisis&&onCrisisDetected){onCrisisDetected(crisis,question);return;}
     const q = question.trim();
     setQuestion("");
     setQaLoading(true);
@@ -68,7 +72,7 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
           {onViewMap && (
             <button onClick={onViewMap} className="btn-view-map">
               <Map size={14} />
-              <span>Map</span>
+              <span>{uiCopy(language).map}</span>
             </button>
           )}
           <button onClick={onReset} className="btn-reset">{L.startOver}</button>

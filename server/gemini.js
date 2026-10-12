@@ -1,3 +1,5 @@
+import { safeCallScript } from '../src/lib/callScript.js';
+import { checkRate } from './cloud-store.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getServices } from "./directory-store.js";
 import { localLookup, localAnswer, validateMatches } from "../src/lib/localLookup.js";
@@ -7,6 +9,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const hasAI = Boolean(process.env.GEMINI_API_KEY && !/your_|placeholder|example|here/i.test(process.env.GEMINI_API_KEY));
 async function generate(model, prompt) {
+  if(process.env.DATABASE_URL){const cap=Math.max(1,Math.min(10000,Number(process.env.SHELTERIQ_AI_DAILY_REQUESTS)||300));if(!await checkRate('ai-global-daily',cap,86400000))throw new Error('Daily allowance reached');}
   const fallbackName = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
   const fallback = fallbackName === MODEL ? null : genAI.getGenerativeModel({
     model: fallbackName, generationConfig: model.generationConfig,
@@ -14,30 +17,8 @@ async function generate(model, prompt) {
   return generateWithFallback(model, fallback, prompt);
 }
 
-function buildLocalCallScript(service, need, who, language = "en") {
-  const opening = language === "es"
-    ? `Hola, llamo sobre ${need || "refugio"}.`
-    : language === "ht"
-      ? `Bonjou, m ap rele pou ${need || "abri"}.`
-      : `Hi, I'm calling about ${need || "shelter"}.`;
-  const identity = who === "family"
-    ? (language === "es" ? "Estoy con niños y necesito saber si aceptan familias." :
-      language === "ht" ? "Mwen ak timoun epi mwen bezwen konnen si nou aksepte fanmi." :
-      "I'm with children and need to know if you accept families.")
-    : (language === "es" ? "Necesito saber si hay espacio disponible hoy." :
-      language === "ht" ? "Mwen bezwen konnen si gen plas ki disponib jodi a." :
-      "I need to know if you have space available today.");
-  const details = service.walkin
-    ? (language === "es" ? "¿Puedo llegar sin cita y qué debo llevar?" :
-      language === "ht" ? "Èske mwen ka vini san randevou, epi kisa mwen dwe pote?" :
-      "Can I come in without an appointment, and what should I bring?")
-    : (language === "es" ? "¿Debo llamar antes de llegar y qué documentos necesitan?" :
-      language === "ht" ? "Èske mwen dwe rele anvan mwen vini, epi ki dokiman nou bezwen?" :
-      "Do I need to call ahead before coming, and what documents do you need?");
-  return `${opening} ${identity} ${details}`.trim();
-}
-
 function getAreaForService(service) {
+  if(service.area)return service.area;
   if (!service.coords) return "unknown";
   if (service.coords.lat < 26.07) return "south";
   if (service.coords.lat > 26.20) return "north";
@@ -117,37 +98,7 @@ export async function runComplexIntake(situation, language = "en", memorySummary
 
 // Generates a personalized call script for a specific service
 export async function generateCallScript(service, need, who, language = "en") {
-  if (!hasAI) {
-    return buildLocalCallScript(service, need, who, language);
-  }
-
-  const model = genAI.getGenerativeModel({
-    model: MODEL,
-    generationConfig: { maxOutputTokens: 2048, temperature: 0.3 }
-  });
-
-  const facts = [
-    service.walkin ? "accepts walk-ins" : "requires calling ahead",
-    `hours: ${service.hours}`,
-    service.eligibility.families ? "accepts families" : "adults only",
-    service.eligibility.noId ? "no ID required" : "ID may be needed",
-    service.eligibility.pets ? "pets allowed" : "no pets",
-  ].join(", ");
-
-  const lang = language === "es" ? "Spanish" : language === "ht" ? "Haitian Creole" : "English";
-
-  const prompt = `Write 2-3 sentences for someone calling ${service.name} (${service.phone}).
-They need: ${need || "shelter"}. They are: ${who === "family" ? "a parent with children" : "an individual"}.
-Service facts: ${facts}.
-Tell them exactly what to say to get help quickly. Plain language only.
-Respond in ${lang}.`;
-
-  try {
-    const result = await generate(model, prompt);
-    return result.response.text().trim();
-  } catch {
-    return buildLocalCallScript(service, need, who, language);
-  }
+  return safeCallScript(service, need, who, language);
 }
 
 // Answers follow-up questions about the matched services

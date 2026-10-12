@@ -1,3 +1,7 @@
+import { uiCopy } from './lib/uiCopy.js';
+import { PrivacyControls } from './components/PrivacyControls.jsx';
+import { validService } from './lib/storage.js';
+import { localStore as localStorage,sessionStore as sessionStorage } from './lib/storage.js';
 import { PreventionIntake } from "./components/PreventionIntake";
 import { ActionPlan } from "./components/ActionPlan";
 import { DisasterCenter } from "./components/DisasterCenter";
@@ -23,14 +27,17 @@ import { useGeolocation } from "./hooks/useGeolocation";
 sessionStorage.removeItem("shelteriq_greeting");
 
 function loadSavedResults() {
-  try { return JSON.parse(localStorage.getItem("sq_results") || "null"); } catch { return null; }
+  try { const value=JSON.parse(localStorage.getItem("sq_results") || "null");return Array.isArray(value)&&value.every(validService)?value:null; } catch { return null; }
 }
 
 export default function App() {
   const [showHome, setShowHome] = useState(true);
   const [language, updateLanguage] = useState(()=>["en","es","ht"].includes(localStorage.getItem("sq_language"))?localStorage.getItem("sq_language"):"en");
   const setLanguage=value=>{updateLanguage(value);localStorage.setItem("sq_language",value);};
-  const R=releaseCopy(language);
+  const R=releaseCopy(language),U=uiCopy(language);
+  const [storageError,setStorageError]=useState(false);
+  useEffect(()=>{document.documentElement.lang=language;},[language]);
+  useEffect(()=>{const failed=()=>setStorageError(true);window.addEventListener("sq-storage-error",failed);return()=>window.removeEventListener("sq-storage-error",failed);},[]);
   const [directoryVersion,setDirectoryVersion]=useState(0);
   useEffect(()=>{let active=true;const refresh=()=>refreshServices().then(()=>{if(active)setDirectoryVersion(v=>v+1);});refresh();const timer=setInterval(refresh,60000);return()=>{active=false;clearInterval(timer);};},[]);
   const [view, setView] = useState(() => loadSavedResults() ? "results" : "intake");
@@ -54,9 +61,9 @@ export default function App() {
   const handleSimpleSubmit = async (need, who, area) => {
     await refreshServices();
     setSearchMessage("");
-    const matched = filterServices(need, who, area, coords);
+    const matched = filterServices(need, who, area, coords,undefined,language);
     const meta = { need, who, area };
-    logRequest(need,area,matched.length,language);
+    logRequest(need,area,matched.length,language,matched.map(s=>s.id),who);
     setResults(matched);
     setIntakeMeta(meta);
     recordAttempt({ query: `${need} · ${who} · ${area}`, resultsShown: matched });
@@ -76,7 +83,7 @@ export default function App() {
       if (response.type === "results") {
         const matched = enrichResults(response.data.matches, response.data.reasons, coords);
         setIntakeMeta({ complex: true, ...response.meta });
-        logRequest(response.meta?.need || "other",response.meta?.area || "unsure",matched.length,language);
+        logRequest(response.meta?.need || "other",response.meta?.area || "unsure",matched.length,language,matched.map(s=>s.id));
         setSearchMessage(response.notice || "");
         recordAttempt({ query: situation, resultsShown: matched });
         setResults(matched);
@@ -158,7 +165,8 @@ export default function App() {
 
   const isOutreach = view === "outreach";
 
-  const handleNavigateToService = (service) => {
+  const handleNavigateToService = (service, activeResults) => {
+    if(activeResults)setResults(activeResults);
     setNavTarget(service);
     setStandardView("map");
   };
@@ -182,19 +190,20 @@ export default function App() {
             }}
             className="btn-mode"
           >
-            {isOutreach ? "User mode" : "Outreach"}
+            {isOutreach ? U.user : U.outreach}
           </button>
         </div>
       </header>
 
       <OfflineBanner language={language} />
+      {storageError&&<p className="search-notice" role="alert">{U.storageError}</p>}
 
       {!isOutreach && view !== "crisis" && (
         <div className="nav-tabs">
           {[
-            { id: "intake", label: "Intake" },
-            { id: "results", label: "Results" },
-            { id: "map", label: "Map" },
+            { id: "intake", label: U.intake },
+            { id: "results", label: U.results },
+            { id: "map", label: U.map },
             { id: "prevention", label: language==="es"?"Vivienda":language==="ht"?"Lojman":"Housing" },
             { id: "disaster", label: language==="es"?"Desastres":language==="ht"?"Dezas":"Disaster" },
             { id: "plan", label: R.plan },
@@ -248,7 +257,7 @@ export default function App() {
               who={intakeMeta.who}
               onSuggestNext={handleSuggestNext}
               onViewMap={results.length > 0 ? () => setStandardView("map") : undefined}
-              onNavigateService={handleNavigateToService}
+              onNavigateService={handleNavigateToService} onCrisisDetected={handleCrisisDetected}
             />
           </div>
         )}
@@ -271,10 +280,11 @@ export default function App() {
         {view === "outreach" && (
           <div className="tab-content scroll-panel">
             <button className="review-entry" onClick={()=>setView("review")}>{R.review}</button>
-            <OutreachMode language={language} onNavigateService={handleNavigateToService} />
+            <OutreachMode language={language} onNavigateService={handleNavigateToService} onCrisisDetected={handleCrisisDetected} />
           </div>
         )}
       </main>
+      <PrivacyControls language={language}/>
     </div>
   );
 }

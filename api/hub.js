@@ -1,4 +1,6 @@
-import { randomBytes, timingSafeEqual, createHash } from "node:crypto";
+import { randomBytes, randomUUID, timingSafeEqual, createHash } from "node:crypto";
+import { signActivity,readActivity } from '../server/activity-receipt.js';
+import { filterServices } from '../src/lib/matching.js';
 import { nodeHandler } from '../server/http-adapter.js';
 export default nodeHandler(GET,POST);
 import { getServices,submitCorrection,correctionQueue,reviewCorrection,recordEvent,metrics,auditHistory } from "../server/directory-store.js";
@@ -10,7 +12,7 @@ const sessions=new Map(); const limits=new Map();
 const json=(value,status=200,headers={})=>Response.json(value,{status,headers:{"Cache-Control":"no-store",...headers}});
 const fields=["hours","phone","address","intakeRequirements","publicStatus"];
 const needs=["shelter","food","mental_health","substance_abuse","veteran","youth","other","rent","mortgage","utilities","eviction","accommodation"];
-const barriers=["closed_intake","full","referral_needed","documents_missing","eligibility_mismatch","transportation","no_response","other"];
+
 function reviewToken(request){return (request.headers.get('cookie')||'').match(/(?:^|;\s*)sq_review=([^;]+)/)?.[1];}
 const hashToken=token=>createHash('sha256').update(token).digest('hex');
 async function reviewer(request){const token=reviewToken(request);if(!token)return false;if(process.env.DATABASE_URL)return validSession(hashToken(token));const expiry=sessions.get(token);return Boolean(expiry&&expiry>Date.now());}
@@ -43,6 +45,15 @@ export async function POST(request){
     if(limit.until<Date.now()){limit.count=0;limit.until=Date.now()+900000;}limit.count++;limits.set(key,limit);
     if(process.env.DATABASE_URL?!await checkRate(key,resource==='events'?200:30):limit.count>(resource==="events"?200:30))return json({error:"Too many requests; try later"},429);
     switch(resource){
+      case 'activity-ticket':{
+        if(!needs.includes(body.requestedNeed)||!['unsure','north','central','south'].includes(body.broadArea))throw new Error('Invalid activity');
+        const all=await getServices(true);
+        if(body.serviceIds&&(!Array.isArray(body.serviceIds)||body.serviceIds.length>20||body.serviceIds.some(id=>!all.some(s=>s.id===id))))throw new Error('Invalid service references');
+        if(body.serviceIds&&['shelter','food','mental_health','substance_abuse','medical','legal'].includes(body.requestedNeed)&&body.serviceIds.some(id=>!all.find(s=>s.id===id).type?.includes(body.requestedNeed)))throw new Error('Service does not match requested need');
+        const matches=body.serviceIds?all.filter(s=>body.serviceIds.includes(s.id)&&s.publicStatus!=='closed'):filterServices(body.requestedNeed,['alone','family','partner'].includes(body.who)?body.who:'alone',body.broadArea,null,all.filter(s=>s.kind!=='prevention'));
+        const id=randomUUID();const payload={id,requestedNeed:body.requestedNeed,broadArea:body.broadArea,resultsCount:matches.length,language:['en','es','ht'].includes(body.language)?body.language:'en',eventType:'request'};
+        return json({id,receipt:signActivity(payload)});
+      }
       case "review-login":{
         const host=new URL(request.url).hostname;
         const local=process.env.SHELTERIQ_LOCAL_REVIEW==="true"&&!process.env.VERCEL&&["127.0.0.1","localhost","[::1]"].includes(host);
@@ -67,10 +78,10 @@ export async function POST(request){
         return json(await reviewCorrection({id:string(body.id,100),expectedVersion:body.expectedVersion,decision:body.decision,sourceUrl:body.decision==="approved"?url(body.sourceUrl):null,reason:string(body.reason,600)},process.env.DATABASE_URL?'authenticated-owner':'local-owner'));
       }
       case "events":{
-        if(!needs.includes(body.requestedNeed)||!["north","central","south","unsure"].includes(body.broadArea)||!["request","contacted","connected","unsuccessful"].includes(body.eventType))throw new Error("Invalid event");
-        if(body.barrier&&!barriers.includes(body.barrier))throw new Error("Invalid barrier");
-        if(body.isDemo)return json({error:"Demo data is excluded"},400);
-        return json(await recordEvent({id:string(body.id,100),requestedNeed:body.requestedNeed,broadArea:body.broadArea,eventType:body.eventType,barrier:body.barrier,resultsCount:Number.isInteger(body.resultsCount)?Math.max(0,Math.min(100,body.resultsCount)):null,referralId:body.referralId?string(body.referralId,100):null,serviceId:body.serviceId?string(body.serviceId,100):null,language:["en","es","ht"].includes(body.language)?body.language:"en"}),201);
+        const ticket=readActivity(body.receipt);
+        if(!ticket||body.id!==ticket.id)return json({error:'A valid server activity receipt is required'},403);
+        if(body.eventType!=='request')return json({error:'Contact outcomes are saved on the device only'},400);
+        return json(await recordEvent({id:ticket.id,requestedNeed:ticket.requestedNeed,broadArea:ticket.broadArea,eventType:'request',resultsCount:ticket.resultsCount,language:ticket.language}),201);
       }
       default:return json({error:"Unknown operation"},404);
     }

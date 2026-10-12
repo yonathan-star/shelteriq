@@ -36,7 +36,7 @@ function requirements(query) {
 function eligible(s, r) {
   const e = s.eligibility;
   if (r.types.includes("shelter") && !r.domesticViolence && ["women-in-distress","domestic-violence-intervention"].includes(s.id)) return false;
-  if (r.types.includes("shelter") && !r.youth && r.age === null && e.maxAge !== null && !r.family) return false;
+  if (r.types.includes("shelter") && !r.youth && r.age === null && e.maxAge !== null) return false;
   return s.publicStatus !== "closed" && (!r.types.length || r.types.some(type => s.type.includes(type))) &&
     (!r.family || e.families) && (!r.veteran || e.veterans) &&
     (!r.youth || e.maxAge !== null) && (!r.noId || e.noId) && (!r.pets || e.pets) &&
@@ -45,6 +45,7 @@ function eligible(s, r) {
 }
 export function matchesRequirements(service, query) { return eligible(service, requirements(query)); }
 function areaOf(s) {
+  if(s.area)return s.area;
   return !s.coords ? null : s.coords.lat < 26.07 ? "south" : s.coords.lat >= 26.20 ? "north" : "central";
 }
 export function localLookup(query, language = "en", memory = null, directory = services) {

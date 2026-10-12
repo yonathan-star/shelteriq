@@ -1,3 +1,4 @@
+import { localStore as localStorage } from './storage.js';
 // Visit outcomes saved only on this device. v3 excludes legacy demo reports.
 const KEY = "sq_checkins_v3";
 
@@ -7,7 +8,7 @@ function load() {
     if (!raw) {
       return {};
     }
-    return JSON.parse(raw);
+    const value=JSON.parse(raw);return value&&typeof value==="object"&&!Array.isArray(value)?Object.fromEntries(Object.entries(value).filter(([,v])=>v&&Number.isFinite(v.lastUpdated)&&["got_in","full"].includes(v.outcome))):{};
   } catch {
     return {};
   }

@@ -1,3 +1,4 @@
+import { localStore as localStorage } from '../lib/storage.js';
 import { useState } from "react";
 import { Search, ChevronDown, Loader } from "lucide-react";
 import { detectCrisis } from "../lib/crisis";
@@ -20,7 +21,7 @@ const LABELS = {
       { value: "mental_health", label: "Mental health support" },
       { value: "substance_abuse", label: "Substance abuse treatment" },
       { value: "veteran", label: "Veteran services" },
-      { value: "youth", label: "Youth services (under 21)" },
+      { value: "youth", label: "Youth services (confirm age requirements)" },
       { value: "other", label: "Other / not sure" },
     ],
     who: [
@@ -52,7 +53,7 @@ const LABELS = {
       { value: "mental_health", label: "Apoyo de salud mental" },
       { value: "substance_abuse", label: "Tratamiento de abuso de sustancias" },
       { value: "veteran", label: "Servicios para veteranos" },
-      { value: "youth", label: "Servicios para jóvenes (menores de 21)" },
+      { value: "youth", label: "Servicios para jóvenes (confirme la edad)" },
       { value: "other", label: "Otro / no estoy seguro" },
     ],
     who: [
@@ -84,7 +85,7 @@ const LABELS = {
       { value: "mental_health", label: "Sipò sante mantal" },
       { value: "substance_abuse", label: "Tretman pou drogue" },
       { value: "veteran", label: "Sèvis veteran" },
-      { value: "youth", label: "Sèvis pou jèn (mwens pase 21 an)" },
+      { value: "youth", label: "Sèvis pou jèn (konfime kondisyon laj)" },
       { value: "other", label: "Lòt / mwen pa konnen" },
     ],
     who: [

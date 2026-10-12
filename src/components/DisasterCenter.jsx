@@ -1,3 +1,4 @@
+import { localStore as localStorage } from '../lib/storage.js';
 import { useEffect,useState } from "react";
 import { hub } from "../lib/serviceRepository.js";
 import { releaseCopy } from "../lib/releaseCopy.js";

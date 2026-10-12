@@ -1,0 +1,5 @@
+import { createHmac,randomBytes,timingSafeEqual } from 'node:crypto';
+const localSecret=randomBytes(32).toString('hex');
+const secret=()=>process.env.SHELTERIQ_EVENT_SECRET||(process.env.SHELTERIQ_REVIEW_TOKEN?createHmac('sha256',process.env.SHELTERIQ_REVIEW_TOKEN).update('ShelterIQ activity receipts v1').digest('hex'):!process.env.VERCEL?localSecret:null);
+export function signActivity(payload){const key=secret();if(!key)throw new Error('Activity not configured');const value=Buffer.from(JSON.stringify({...payload,expires:Date.now()+300000})).toString('base64url');return value+'.'+createHmac('sha256',key).update(value).digest('base64url');}
+export function readActivity(token){try{const key=secret();if(!key||typeof token!=='string'||token.length>4000)return null;const [value,signature]=token.split('.');const expected=createHmac('sha256',key).update(value).digest();const actual=Buffer.from(signature||'','base64url');if(actual.length!==expected.length||!timingSafeEqual(actual,expected))return null;const data=JSON.parse(Buffer.from(value,'base64url'));return data.expires>Date.now()?data:null;}catch{return null;}}

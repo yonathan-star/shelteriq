@@ -1,7 +1,9 @@
+import { constrainResults,searchNeeds,searchAreas } from '../src/lib/searchConstraints.js';
 import { getServices } from "../server/directory-store.js";
 import { nodeHandler } from '../server/http-adapter.js';
 import { checkRate } from '../server/cloud-store.js';
 import { createHash } from 'node:crypto';
+import { callNeeds } from '../src/lib/callScript.js';
 export default nodeHandler(GET,POST);
 import { runComplexIntake, generateCallScript, answerFollowUp, runOutreachLookup } from "../server/gemini.js";
 
@@ -45,11 +47,12 @@ export async function POST(request) {
     let result;
     switch(input.action) {
       case "intake": result=await runComplexIntake(text(input.situation),language,await memory(input.memorySummary)); break;
-      case "outreach": result=await runOutreachLookup(text(input.query),language); break;
+      case "outreach": { const filters=input.filters;if(filters&&(!searchNeeds.includes(filters.need)||!searchAreas.includes(filters.area)))return json({error:"Invalid search filters"},400);result=constrainResults(await runOutreachLookup(text(input.query)+(filters?` Requested need: ${filters.need}. Broad area: ${filters.area}.`:""),language),filters,services);break;}
       case "call": {
         const service=services.find(s=>s.id===input.serviceId);
         if (!service) return json({error:"Unknown service"},400);
-        const need=typeof input.need === "string" && input.need.length < 80 ? input.need : "shelter";
+        const need=input.need??'shelter';
+        if(!callNeeds.includes(need))return json({error:'Unsupported need'},400);
         const who=["alone","family","partner"].includes(input.who) ? input.who : "alone";
         result=await generateCallScript(service,need,who,language); break;
       }
