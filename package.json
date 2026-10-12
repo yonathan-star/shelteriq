@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "demo": "node scripts/record-demo.mjs",
-    "test": "node --test scripts/test-functional.mjs scripts/test-private-ai.mjs scripts/test-release.mjs scripts/test-map-links.mjs"
+    "test": "node --test scripts/test-functional.mjs scripts/test-private-ai.mjs scripts/test-release.mjs scripts/test-map-links.mjs scripts/test-ai-request.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
