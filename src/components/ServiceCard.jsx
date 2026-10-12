@@ -1,4 +1,4 @@
-import { uiCopy,displayServiceReason } from '../lib/uiCopy.js';
+import { uiCopy,displayServiceReason,intakeConfirmation } from '../lib/uiCopy.js';
 import { CorrectionForm } from "./CorrectionForm.jsx";
 import { releaseCopy } from "../lib/releaseCopy.js";
 import { services as directory } from "../data/services.js";
@@ -104,15 +104,15 @@ export function ServiceCard({ service: result, rank, need, who, language = "en",
         <p className="meta-row"><Clock size={14} /><span>{service.hours}</span></p>
         <p className="meta-row">
           <Phone size={14} />
-          <span>{service.verificationState!=="verified"?U.listed+": ":""}{service.walkin ? L.walkin : L.callAhead}</span>
+          <span>{service.verificationState==='verified'||service.fieldVerification?.walkin?(service.walkin?L.walkin:L.callAhead):intakeConfirmation(language)}</span>
         </p>
-        {service.eligibility.pets && (
+        {service.eligibility.pets && (service.verificationState==='verified'||service.fieldVerification?.['eligibility.pets']) && (
           <p className="meta-row"><Users size={14} /><span>{U.listed}: {L.pets}</span></p>
         )}
-        {service.eligibility.noId && (
+        {service.eligibility.noId && (service.verificationState==='verified'||service.fieldVerification?.['eligibility.noId']) && (
           <p className="meta-row"><Users size={14} /><span>{U.listed}: {L.noId}</span></p>
         )}
-        {service.beds && (
+        {service.beds && (service.verificationState==='verified'||service.fieldVerification?.beds) && (
           <p className="meta-row"><Users size={14} /><span>{U.capacity(service.beds)}</span></p>
         )}
       </div>

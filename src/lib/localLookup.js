@@ -72,7 +72,8 @@ export function validateMatches(parsed, query, language, memory, directory = ser
     if(fallback.type === "results") fallback.notice=language === "es" ? "Las opciones sugeridas no cumplían sus requisitos. Estas opciones se filtraron usando el directorio." : language === "ht" ? "Opsyon yo te sijere yo pa t satisfè kondisyon ou. Nou filtre rezilta sa yo ak anyè a." : "The suggested options did not meet your requirements. These results were filtered using the directory.";
     return fallback;
   }
-  return { type: "results", meta: { need: r.types[0], who: r.family ? "family" : "alone", area: r.area }, data: { matches, reasons: Object.fromEntries(matches.map(id => [id, typeof parsed.reasons[id] === "string" ? parsed.reasons[id] : ""])) } };
+  // AI ranks IDs; standardized explanations cannot inherit invented availability or intake claims.
+  return { type: "results", meta: { need: r.types[0], who: r.family ? "family" : "alone", area: r.area }, data: { matches, reasons: Object.fromEntries(matches.map(id => [id,(copy[language]||copy.en).reason])) } };
 }
 export function localAnswer(question, matched, language = "en") {
   const L = copy[language] || copy.en;
