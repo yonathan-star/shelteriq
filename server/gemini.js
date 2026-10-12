@@ -1,15 +1,17 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getServices } from "./directory-store.js";
 import { localLookup, localAnswer, validateMatches } from "../src/lib/localLookup.js";
+import { generateWithFallback } from './ai-request.js';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const hasAI = Boolean(process.env.GEMINI_API_KEY && !/your_|placeholder|example|here/i.test(process.env.GEMINI_API_KEY));
 async function generate(model, prompt) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
-  try { return await model.generateContent(prompt, { signal: controller.signal }); }
-  finally { clearTimeout(timer); }
+  const fallbackName = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
+  const fallback = fallbackName === MODEL ? null : genAI.getGenerativeModel({
+    model: fallbackName, generationConfig: model.generationConfig,
+  });
+  return generateWithFallback(model, fallback, prompt);
 }
 
 function buildLocalCallScript(service, need, who, language = "en") {
