@@ -1,3 +1,4 @@
+import { uiCopy } from '../lib/uiCopy.js';
 import { useState,useEffect } from "react";
 import { loadPlan,savePlan,clearPlan,downloadCalendar,reminderInstant } from "../lib/plans.js";
 import { releaseCopy } from "../lib/releaseCopy.js";
@@ -10,7 +11,7 @@ function ReminderForm({step,L,onSave}){
   return <details className="reminder-form"><summary>{L.follow}</summary><label>{L.due}<input type="datetime-local" value={time} onInput={e=>setTime(e.currentTarget.value)} onChange={e=>setTime(e.target.value)}/></label>
     <p className="muted">{Intl.DateTimeFormat().resolvedOptions().timeZone}</p><p>{L.notificationPreview}: “{L.neutral}”</p>
     <label className="check-label"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>{L.reminderConsent}</label>
-    <button className="btn-mode" disabled={!consent||!time} onClick={()=>{const instant=reminderInstant(time);if(!instant||Date.parse(instant)<=Date.now()){setError(L.follow);return;}onSave({id:crypto.randomUUID(),stepId:step.id,dueAt:instant,timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone,status:"pending",consentAt:new Date().toISOString(),consentVersion:1});setError("");}}>{L.saveReminder}</button>{error&&<p role="alert">{error}</p>}
+    <button className="btn-mode" disabled={!consent||!time} onClick={()=>{const instant=reminderInstant(time);if(!instant||Date.parse(instant)<=Date.now()){setError(uiCopy(L===releaseCopy("es")?"es":L===releaseCopy("ht")?"ht":"en").future);return;}onSave({id:crypto.randomUUID(),stepId:step.id,dueAt:instant,timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone,status:"pending",consentAt:new Date().toISOString(),consentVersion:1});setError("");}}>{L.saveReminder}</button>{error&&<p role="alert">{error}</p>}
   </details>;
 }
 export function ActionPlan({language,onPrevention}){

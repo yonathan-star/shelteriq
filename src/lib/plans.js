@@ -1,5 +1,7 @@
+import { localStore as localStorage } from './storage.js';
 const KEY="sq_plan_v1";
-export function loadPlan(){try{return JSON.parse(localStorage.getItem(KEY)||"null");}catch{return null;}}
+function validZone(value){try{if(typeof value!=='string')return false;new Intl.DateTimeFormat('en',{timeZone:value});return true;}catch{return false;}}
+export function loadPlan(){try{const p=JSON.parse(localStorage.getItem(KEY)||"null");return p&&typeof p.id==="string"&&Array.isArray(p.steps)&&p.steps.every(s=>s&&typeof s.id==="string"&&typeof s.serviceName==="string"&&typeof s.sourceUrl==="string"&&s.sourceUrl.startsWith("https://")&&["done","pending"].includes(s.status))&&Array.isArray(p.reminders)&&p.reminders.every(r=>r&&typeof r.id==="string"&&Number.isFinite(Date.parse(r.dueAt))&&validZone(r.timeZone))?p:null;}catch{return null;}}
 export function savePlan(plan){const next={...plan,updatedAt:new Date().toISOString()};localStorage.setItem(KEY,JSON.stringify(next));return next;}
 export function clearPlan(){localStorage.removeItem(KEY);}
 export function appendPlanSteps(steps,language){

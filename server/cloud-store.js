@@ -24,7 +24,7 @@ export async function metrics(){
 }
 export async function saveFeed(key,record){await query('INSERT INTO shelteriq.feed_cache(id,record) VALUES($1,$2::jsonb) ON CONFLICT(id) DO UPDATE SET record=EXCLUDED.record',[key,JSON.stringify(record)]);}
 export async function loadFeed(key){const [row]=await query('SELECT record FROM shelteriq.feed_cache WHERE id=$1',[key]);return row?.record||null;}
-export async function checkRate(key,max){const until=Math.floor(Date.now()/900000);const [row]=await query('INSERT INTO shelteriq.rate_limits(id,bucket,count) VALUES($1,$2,1) ON CONFLICT(id) DO UPDATE SET bucket=EXCLUDED.bucket,count=CASE WHEN shelteriq.rate_limits.bucket=EXCLUDED.bucket THEN shelteriq.rate_limits.count+1 ELSE 1 END RETURNING count',[key,until]);return row.count<=max;}
+export async function checkRate(key,max,windowMs=900000){const until=Math.floor(Date.now()/windowMs);const [row]=await query('INSERT INTO shelteriq.rate_limits(id,bucket,count) VALUES($1,$2,1) ON CONFLICT(id) DO UPDATE SET bucket=EXCLUDED.bucket,count=CASE WHEN shelteriq.rate_limits.bucket=EXCLUDED.bucket THEN shelteriq.rate_limits.count+1 ELSE 1 END RETURNING count',[key,until]);return row.count<=max;}
 export async function saveSession(hash,expires){await query('INSERT INTO shelteriq.sessions(id,expires_at) VALUES($1,$2)',[hash,new Date(expires).toISOString()]);}
 export async function validSession(hash){const [row]=await query('SELECT id FROM shelteriq.sessions WHERE id=$1 AND expires_at>now()',[hash]);return Boolean(row);}
 export async function revokeSession(hash){await query('DELETE FROM shelteriq.sessions WHERE id=$1',[hash]);}

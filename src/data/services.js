@@ -1,3 +1,4 @@
+import { applyReviewedFacts } from './reviewedFacts.js';
 export const legacyServices = [
   {
     id: "broward-partnership-central",
@@ -481,4 +482,4 @@ export const legacyServices = [
   }
 ];
 
-export const services = legacyServices.map(s => ({ ...s, version: 1, sourceUrl: s.website || null, verifiedAt: null, verificationState: "needs_review", publicStatus: "unknown", documents: [], intakeRequirements: s.walkin ? "Call to confirm walk-in intake and required documents." : "Call to confirm referral requirements before traveling." }));
+export const services = legacyServices.map(s => applyReviewedFacts({ ...s, version: 1, sourceUrl: s.website || null, verifiedAt: null, verificationState: "needs_review", publicStatus: "unknown", documents: [], intakeRequirements: s.walkin ? "Call to confirm walk-in intake and required documents." : "Call to confirm referral requirements before traveling." }));

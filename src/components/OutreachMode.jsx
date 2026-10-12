@@ -1,3 +1,7 @@
+import { validService } from '../lib/storage.js';
+import { detectCrisis } from '../lib/crisis.js';
+import { uiCopy } from '../lib/uiCopy.js';
+import { sessionStore as sessionStorage } from '../lib/storage.js';
 import { releaseCopy } from "../lib/releaseCopy";
 import { useState } from "react";
 import { runOutreachLookup } from "../lib/gemini";
@@ -12,16 +16,16 @@ const OUTREACH_STATE_KEY = "sq_outreach_state";
 
 function loadOutreachState() {
   try {
-    return JSON.parse(sessionStorage.getItem(OUTREACH_STATE_KEY) || "{}");
+    const value=JSON.parse(sessionStorage.getItem(OUTREACH_STATE_KEY) || "{}");return value&&typeof value.query==="string"&&Array.isArray(value.results)&&value.results.every(validService)?value:{};
   } catch {
     return {};
   }
 }
 
-export function OutreachMode({ language, onNavigateService }) {
+export function OutreachMode({ language, onNavigateService, onCrisisDetected }) {
   const savedState = loadOutreachState();
-  const R=releaseCopy(language);
-  const [requestedNeed,setRequestedNeed]=useState("shelter");
+  const R=releaseCopy(language),U=uiCopy(language);
+  const [requestedNeed,setRequestedNeed]=useState("other");
   const [broadArea,setBroadArea]=useState("unsure");
   const [activeTab, setActiveTab] = useState(savedState.activeTab || "search");
   const [query, setQuery] = useState(savedState.query || "");
@@ -43,19 +47,20 @@ export function OutreachMode({ language, onNavigateService }) {
 
   const handleSearch = async () => {
     if (!query.trim() || loading) return;
+    const crisis=detectCrisis(query);if(crisis&&onCrisisDetected){onCrisisDetected(crisis,query);return;}
     setLoading(true);
     setError("");
     setNotice("");
     try {
-      const response = await runOutreachLookup(query, language);
+      const response = await runOutreachLookup(query, language,{need:requestedNeed,area:broadArea});
       if (response.type !== "results") { setNotice(response.text); setResults([]); persistState({ results: [] }); return; }
       setNotice(response.notice || "");
       const enriched = enrichResults(response.data.matches, response.data.reasons, coords);
       setResults(enriched);
       persistState({ query, results: enriched });
       logSearch({
-        requestedNeed,broadArea,language,
-        resultsCount: enriched.length,
+        requestedNeed:response.meta?.need||requestedNeed,broadArea:response.meta?.area||broadArea,language,
+        resultsCount: enriched.length, serviceIds: enriched.map(s=>s.id),
         serviceTypes: enriched.flatMap(s => s.type)
       });
     } catch {
@@ -78,7 +83,7 @@ export function OutreachMode({ language, onNavigateService }) {
             persistState({ activeTab: "search" });
           }}
         >
-          Search
+          {U.search}
         </button>
         <button
           className={`outreach-tab${activeTab === "intelligence" ? " active" : ""}`}
@@ -88,15 +93,17 @@ export function OutreachMode({ language, onNavigateService }) {
             persistState({ activeTab: "intelligence" });
           }}
         >
-          Intelligence
+          {U.intelligence}
         </button>
       </div>
 
       {activeTab === "search" && (
         <>
-          <div className="release-panel"><label>{R.need}<select value={requestedNeed} onChange={e=>setRequestedNeed(e.target.value)}>{["shelter","food","mental_health","other"].map(n=><option key={n} value={n}>{n.replaceAll("_"," ")}</option>)}</select></label><label>{R.area}<select value={broadArea} onChange={e=>setBroadArea(e.target.value)}>{["unsure","north","central","south"].map(a=><option key={a} value={a}>{R[a]}</option>)}</select></label></div>
+          <div className="release-panel"><label>{R.need}<select value={requestedNeed} onChange={e=>setRequestedNeed(e.target.value)}>{["shelter","food","mental_health","other"].map(n=><option key={n} value={n}>{L.typeBadge[n]||(n==="other"?(language==="es"?"Otro / no sé":language==="ht"?"Lòt / pa konnen":"Other / not sure"):n)}</option>)}</select></label><label>{R.area}<select value={broadArea} onChange={e=>setBroadArea(e.target.value)}>{["unsure","north","central","south"].map(a=><option key={a} value={a}>{R[a]}</option>)}</select></label></div>
           <div className="outreach-form">
             <input
+              aria-label={U.query}
+              maxLength={3000}
               value={query}
               onChange={e => {
                 const nextQuery = e.target.value;
@@ -121,8 +128,9 @@ export function OutreachMode({ language, onNavigateService }) {
                 key={service.id}
                 service={service}
                 rank={i + 1}
+                need={requestedNeed}
                 language={language}
-                onNavigate={onNavigateService}
+                onNavigate={service=>onNavigateService(service,results)}
               />
             ))}
         </>

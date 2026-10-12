@@ -1,3 +1,4 @@
+import { uiCopy } from '../lib/uiCopy.js';
 import { CorrectionForm } from "./CorrectionForm.jsx";
 import { releaseCopy } from "../lib/releaseCopy.js";
 import { services as directory } from "../data/services.js";
@@ -29,7 +30,7 @@ export function SkeletonCard() {
 
 export function ServiceCard({ service: result, rank, need, who, language = "en", onNavigate }) {
   const service={...result,...directory.find(s=>s.id===result.id)};
-  const R=releaseCopy(language);
+  const R=releaseCopy(language),U=uiCopy(language);
   const [showCorrection,setShowCorrection]=useState(false);
   const [script, setScript] = useState(null);
   const [loadingScript, setLoadingScript] = useState(false);
@@ -84,8 +85,9 @@ export function ServiceCard({ service: result, rank, need, who, language = "en",
         )}
       </div>
 
+      {service.verificationState!=="verified"&&<p className="search-notice">{U.unverified}</p>}
       {service.reason && (
-        <p className="reason-box">{service.reason}</p>
+        <p className="reason-box">{service.verificationState!=="verified"&&<strong>{U.listed}: </strong>}{service.reason}</p>
       )}
 
       <div className="type-list">
@@ -101,16 +103,16 @@ export function ServiceCard({ service: result, rank, need, who, language = "en",
         <p className="meta-row"><Clock size={14} /><span>{service.hours}</span></p>
         <p className="meta-row">
           <Phone size={14} />
-          <span>{service.walkin ? L.walkin : L.callAhead}</span>
+          <span>{service.verificationState!=="verified"?U.listed+": ":""}{service.walkin ? L.walkin : L.callAhead}</span>
         </p>
         {service.eligibility.pets && (
-          <p className="meta-row"><Users size={14} /><span>{L.pets}</span></p>
+          <p className="meta-row"><Users size={14} /><span>{U.listed}: {L.pets}</span></p>
         )}
         {service.eligibility.noId && (
-          <p className="meta-row"><Users size={14} /><span>{L.noId}</span></p>
+          <p className="meta-row"><Users size={14} /><span>{U.listed}: {L.noId}</span></p>
         )}
         {service.beds && (
-          <p className="meta-row"><Users size={14} /><span>{L.beds(service.beds)}</span></p>
+          <p className="meta-row"><Users size={14} /><span>{U.capacity(service.beds)}</span></p>
         )}
       </div>
 
@@ -160,7 +162,7 @@ export function ServiceCard({ service: result, rank, need, who, language = "en",
         </button>
       )}
 
-      <div className="directory-proof"><p>{R[service.publicStatus] || R.unknown} · v{service.version || 1}</p><p>{service.verifiedAt ? `${R.checked}: ${new Date(service.verifiedAt).toLocaleDateString()}` : R.unverified}</p>{service.sourceUrl&&<a href={service.sourceUrl} target="_blank" rel="noopener noreferrer">{R.source}</a>}<p>{service.intakeRequirements}</p><button className="btn-reset" onClick={()=>setShowCorrection(v=>!v)}>{R.report}</button>{showCorrection&&<CorrectionForm service={service} language={language} onClose={()=>setShowCorrection(false)}/>}</div>
+      <div className="directory-proof"><p>{R[service.publicStatus] || R.unknown} · v{service.version || 1}</p><p>{service.verifiedAt ? `${R.checked}: ${service.verifiedAt.slice(0,10)}` : R.unverified}</p>{service.sourceUrl&&<a href={service.sourceUrl} target="_blank" rel="noopener noreferrer">{R.source}</a>}<p>{service.intakeRequirements}</p><button className="btn-reset" onClick={()=>setShowCorrection(v=>!v)}>{R.report}</button>{showCorrection&&<CorrectionForm service={service} language={language} onClose={()=>setShowCorrection(false)}/>}</div>
       {/* Personal visit history */}
       {!showCheckin ? (
         <button
@@ -185,13 +187,13 @@ export function ServiceCard({ service: result, rank, need, who, language = "en",
             className={`card-feedback-btn${rejected ? " rejected" : ""}`}
             onClick={() => { recordRejection(service.id); setRejected(true); }}
           >
-            {rejected ? "Marked as didn't work" : "Didn't work"}
+            {language==='es'?(rejected?'Marcado: no funcionó':'No funcionó'):language==='ht'?(rejected?'Make: pa mache':'Pa t mache'):(rejected?"Marked as didn't work":"Didn't work")}
           </button>
           <button
             className={`card-feedback-btn${contacted ? " contacted" : ""}`}
             onClick={() => { recordContact(service.id); setContacted(true); }}
           >
-            {contacted ? "Marked as called" : "Called"}
+            {language==='es'?(contacted?'Llamada marcada':'Llamé'):language==='ht'?(contacted?'Apèl make':'Mwen rele'):(contacted?'Marked as called':'Called')}
           </button>
         </div>
       )}
