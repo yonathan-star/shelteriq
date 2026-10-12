@@ -55,7 +55,7 @@ export function OutreachMode({ language, onNavigateService, onCrisisDetected }) 
       const response = await runOutreachLookup(query, language,{need:requestedNeed,area:broadArea});
       if (response.type !== "results") { setNotice(response.text); setResults([]); persistState({ results: [] }); return; }
       setNotice(response.notice || "");
-      const enriched = enrichResults(response.data.matches, response.data.reasons, coords);
+      const enriched = enrichResults(response.data.matches, response.data.reasons, coords,language);
       setResults(enriched);
       persistState({ query, results: enriched });
       logSearch({

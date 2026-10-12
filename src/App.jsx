@@ -81,7 +81,7 @@ export default function App() {
       await refreshServices();
       const response = await runComplexIntake(situation, language);
       if (response.type === "results") {
-        const matched = enrichResults(response.data.matches, response.data.reasons, coords);
+        const matched = enrichResults(response.data.matches, response.data.reasons, coords,language);
         setIntakeMeta({ complex: true, ...response.meta });
         logRequest(response.meta?.need || "other",response.meta?.area || "unsure",matched.length,language,matched.map(s=>s.id));
         setSearchMessage(response.notice || "");
@@ -105,7 +105,7 @@ export default function App() {
       const situation = `${summary.lastQuery || "shelter"}. Please find different options.`;
       const response = await runComplexIntake(situation, language, summary);
       if (response.type === "results") {
-        const matched = enrichResults(response.data.matches, response.data.reasons, coords);
+        const matched = enrichResults(response.data.matches, response.data.reasons, coords,language);
         recordAttempt({ query: summary.lastQuery || "shelter", resultsShown: matched });
         setSearchMessage(response.notice || "");
         setIntakeMeta({ complex: true, ...response.meta });

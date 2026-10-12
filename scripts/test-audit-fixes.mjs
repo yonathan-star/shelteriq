@@ -7,6 +7,7 @@ import { signActivity,readActivity } from '../server/activity-receipt.js';
 import { localStore } from '../src/lib/storage.js';
 import { loadPlan } from '../src/lib/plans.js';
 import { reviewedServiceFacts } from '../server/reviewed-service-facts.js';
+import { displayServiceReason,uiCopy } from '../src/lib/uiCopy.js';
 process.env.SHELTERIQ_DB_PATH=':memory:';
 const { POST:assist }=await import('../api/assist.js');
 const { POST:hub }=await import('../api/hub.js');
@@ -43,4 +44,10 @@ test('privacy clearing preserves unrelated storage and blocked storage does not 
 test('AI follow-up grounding excludes unreviewed eligibility and capacity',()=>{
  const summary=reviewedServiceFacts({name:'Test',phone:'123',beds:80,eligibility:{noId:true,minAge:18},fieldVerification:{'eligibility.minAge':{verifiedAt:'2026-10-12'}}});
  assert.deepEqual(summary.verifiedFacts,{'eligibility.minAge':18});assert.equal(summary.beds,undefined);
+});
+test('stale or differently translated cached reasons do not contradict current facts',()=>{
+ const result={version:1,reason:'Walk-ins accepted',reasonLanguage:'en'};
+ assert.equal(displayServiceReason(result,{version:2},'en'),uiCopy('en').match);
+ assert.equal(displayServiceReason(result,{version:1},'es'),uiCopy('es').match);
+ assert.equal(displayServiceReason(result,{version:1},'en'),result.reason);
 });
