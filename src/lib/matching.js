@@ -7,7 +7,7 @@ export function getServiceById(id) {
   return services.find(s => s.id === id) || null;
 }
 
-export function enrichResults(matchIds, reasons, userCoords) {
+export function enrichResults(matchIds, reasons, userCoords, language='en') {
   return matchIds
     .map(id => {
       const service = getServiceById(id);
@@ -19,6 +19,7 @@ export function enrichResults(matchIds, reasons, userCoords) {
       return {
         ...service,
         reason: reasons[id] || "",
+        reasonLanguage:language,
         distance: distance ? parseFloat(distance.toFixed(1)) : null
       };
     })
@@ -68,6 +69,7 @@ export function filterServices(need, who, area, userCoords, directory=services, 
   return filtered.slice(0, 5).map(s => ({
     ...s,
     reason: buildReason(language),
+    reasonLanguage:language,
     distance: userCoords && s.coords ? parseFloat(getDistanceMiles(userCoords, s.coords).toFixed(1)) : null,
   }));
 }

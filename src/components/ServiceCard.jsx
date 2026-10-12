@@ -1,4 +1,4 @@
-import { uiCopy } from '../lib/uiCopy.js';
+import { uiCopy,displayServiceReason } from '../lib/uiCopy.js';
 import { CorrectionForm } from "./CorrectionForm.jsx";
 import { releaseCopy } from "../lib/releaseCopy.js";
 import { services as directory } from "../data/services.js";
@@ -30,6 +30,7 @@ export function SkeletonCard() {
 
 export function ServiceCard({ service: result, rank, need, who, language = "en", onNavigate }) {
   const service={...result,...directory.find(s=>s.id===result.id)};
+  service.reason=displayServiceReason(result,service,language);
   const R=releaseCopy(language),U=uiCopy(language);
   const [showCorrection,setShowCorrection]=useState(false);
   const [script, setScript] = useState(null);
