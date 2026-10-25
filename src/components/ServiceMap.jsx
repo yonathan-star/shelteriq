@@ -95,6 +95,7 @@ export function ServiceMap({services:results=[],userCoords,userHeading,userAccur
   <label className="nearby-toggle"><input type="checkbox" checked={nearby} onChange={e=>setNearby(e.target.checked)}/>{L.nearby}</label></>}
   <div className="route-map-stage">
    <div className="map-hero"><div ref={container} className="hazard-map" aria-label={L.title}/></div>
+   {navTarget&&!route&&<div className="map-turn-banner route-status-banner" role="status"><p>{mode==='TRANSIT'?L.transitNote:!userCoords?L.location:current?.error?L.failed:L.loading}</p></div>}
    {navTarget&&route&&<div className="map-turn-banner free-route-step" aria-live="polite"><span className="turn-symbol" aria-hidden="true">{turnSymbol}</span><div><small>{arrived?L.arrival:`${L.step} ${stepIndex+1} ${L.of} ${route.steps.length}`}</small><p>{arrived?navTarget.name:routeInstruction(activeStep,language)}</p>{!arrived&&activeStep&&<small>{Math.round(activeStep.distance)} m</small>}</div></div>}
    {navTarget&&route&&<button className="map-follow-control" aria-pressed={follow} onClick={()=>setFollow(v=>!v)}>{follow?L.following:L.follow}</button>}
   </div>

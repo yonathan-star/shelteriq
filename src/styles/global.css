@@ -2650,3 +2650,4 @@ header > div:first-child { min-width: 0; }
 .navigation-active>.route-attribution,.navigation-active>.section-bar,.navigation-active>.service-map-card{margin-left:18px;margin-right:18px;}
 .navigation-user-arrow svg{width:32px;height:32px;filter:drop-shadow(0 2px 3px #0004);}
 .navigation-active .leaflet-top.leaflet-left{top:105px;}
+.route-status-banner{position:absolute;z-index:700;top:12px;left:12px;right:12px;border-radius:12px;background:#0b4935;color:white;padding:14px 16px;box-shadow:0 3px 14px #0003;font-size:13px;line-height:1.5;}
