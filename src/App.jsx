@@ -44,6 +44,7 @@ export default function App() {
   const [lastStandardView, setLastStandardView] = useState(() => loadSavedResults() ? "results" : "intake");
   const [results, setResults] = useState(() => loadSavedResults() || []);
   const [navTarget, setNavTarget] = useState(null);
+  const [mapMode, setMapMode] = useState("services");
   const [intakeMeta, setIntakeMeta] = useState(() => {
     try { return JSON.parse(localStorage.getItem("sq_meta") || "{}"); } catch { return {}; }
   });
@@ -167,6 +168,7 @@ export default function App() {
 
   const handleNavigateToService = (service, activeResults) => {
     if(activeResults)setResults(activeResults);
+    setMapMode("services");
     setNavTarget(service);
     setStandardView("map");
   };
@@ -221,7 +223,7 @@ export default function App() {
       <main className="app-main" data-directory-version={directoryVersion}>
         {view==="prevention"&&<div className="tab-content scroll-panel"><PreventionIntake language={language} onPlan={()=>setStandardView("plan")} onShelter={()=>setStandardView("intake")}/></div>}
         {view==="plan"&&<div className="tab-content scroll-panel"><ActionPlan language={language} onPrevention={()=>setStandardView("prevention")}/></div>}
-        {view==="disaster"&&<div className="tab-content scroll-panel"><DisasterCenter language={language} onOpenMap={()=>{setNavTarget(null);setStandardView("map");}}/></div>}
+        {view==="disaster"&&<div className="tab-content scroll-panel"><DisasterCenter language={language} onOpenMap={()=>{setNavTarget(null);setMapMode("hazards");setStandardView("map");}}/></div>}
         {view==="review"&&<div className="tab-content scroll-panel"><ProviderReviewQueue language={language}/></div>}
         {searchMessage && !isOutreach && view !== "crisis" && <p className="search-notice" role="status">{searchMessage}</p>}
         {view === "crisis" && crisis && (
@@ -265,6 +267,9 @@ export default function App() {
             {!locationEnabled&&<button className="map-location-prompt" aria-label={language==="es"?"Usar mi ubicación":language==="ht"?"Sèvi ak kote mwen ye":"Use my location"} title={language==="es"?"Usar mi ubicación":language==="ht"?"Sèvi ak kote mwen ye":"Use my location"} onClick={()=>setLocationEnabled(true)}><LocateFixed size={17}/></button>}
             {locationEnabled&&locationError&&<p className="location-notice" role="status">{language==='es'?'Ubicación no disponible. Puede explorar el mapa.':language==='ht'?'Kote ou ye pa disponib. Ou ka eksplore kat la.':'Location unavailable. You can still explore the map.'}</p>}
             <MapView
+              mapMode={mapMode}
+              onMapModeChange={setMapMode}
+              onNavigateService={handleNavigateToService}
               services={results.length > 0 ? results : []}
               userCoords={coords}
               userHeading={heading}

@@ -2608,3 +2608,26 @@ header > div:first-child { min-width: 0; }
 
 .privacy-controls{padding:14px 18px;font-size:12px;background:#f7f5ef;color:#174d36;flex-shrink:0}.privacy-controls summary{cursor:pointer;font-weight:600}.privacy-controls label{display:flex;gap:8px;align-items:start;margin:12px 0}.privacy-controls button:disabled{opacity:.45}.map-coverage{font-size:12px;line-height:1.5}.leaflet-interactive:focus{outline:3px solid #174d36;outline-offset:3px}
 .privacy-footer{flex-shrink:0;max-height:38vh;overflow:auto;background:#f7f5ef;font-size:12px}.privacy-footer>a{display:block;padding:8px 18px;color:#174d36}.privacy-footer .privacy-controls{padding-top:6px}
+
+.map-workspace{height:100%;min-height:0;display:flex;flex-direction:column;}
+.map-mode-toolbar{display:flex;flex-wrap:wrap;gap:7px;flex-shrink:0;padding:10px 60px 10px 12px;border-bottom:1px solid var(--ink-100);background:white;}
+.map-mode-toolbar .btn-mode{font-size:11px;padding:8px 10px;}
+.map-mode-toolbar [aria-pressed="true"]{background:var(--green-800);color:white;}
+.map-workspace-content{flex:1;min-height:0;overflow:auto;}
+.map-workspace-content>.map-shell{min-height:440px;}
+.free-route-modes{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0;}
+.free-route-modes .btn-mode{font-size:11px;padding:8px 11px;}
+.free-route-modes [aria-pressed="true"]{background:var(--green-800);color:white;}
+.free-route-step{background:var(--green-50);padding:14px;border-radius:10px;margin:12px 0;}
+.free-route-step p{font-size:17px;line-height:1.5;font-weight:600;color:var(--green-900);}
+.free-route-step small{font-size:11px;color:var(--ink-500);}
+.route-summary{font-weight:700;color:var(--green-800);}
+.route-directions{font-size:12px;margin:15px 0;line-height:1.7;}
+.route-directions li{margin:9px 0;}
+.route-attribution{font-size:10px;line-height:1.5;color:var(--ink-500);margin:12px 0;}
+.route-attribution a{color:var(--green-700);}
+.destination-card .muted{font-size:11px;line-height:1.6;}
+.map-mode-toolbar .btn-mode,.service-map-polish .btn-mode{color:var(--green-800);background:var(--green-50);border:1px solid var(--green-100);}
+.map-mode-toolbar [aria-pressed="true"],.service-map-polish [aria-pressed="true"]{background:var(--green-800);color:white;}
+.service-map-polish .btn-mode:disabled{opacity:.45;cursor:not-allowed;}
+.service-map-polish .btn-reset{color:var(--green-700);background:transparent;}

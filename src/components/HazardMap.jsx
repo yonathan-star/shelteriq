@@ -27,7 +27,7 @@ export function HazardMap({language='en',userCoords}){
   const expiryKey=currentWeather(data?.weather?.features||[],now).map(f=>f.id).join(',');
   useEffect(()=>{let active=true;const refresh=()=>hub('hazards').then(d=>{if(active){setData(d);setError(false);setLoading(false);}}).catch(()=>{if(active){setError(true);setLoading(false);}});refresh();const timer=setInterval(refresh,60000),clock=setInterval(()=>setNow(Date.now()),15000);const visible=()=>{if(document.visibilityState==='visible')refresh();};document.addEventListener('visibilitychange',visible);return()=>{active=false;clearInterval(timer);clearInterval(clock);document.removeEventListener('visibilitychange',visible);};},[]);
   useEffect(()=>{
-    const instance=Leaflet.map(container.current,{scrollWheelZoom:false}).setView([26.15,-80.3],7);
+    const instance=Leaflet.map(container.current,{scrollWheelZoom:false,zoomAnimation:false,fadeAnimation:false,markerZoomAnimation:false}).setView([26.15,-80.3],7);
     Leaflet.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:18}).addTo(instance);
     layers.current=Leaflet.layerGroup().addTo(instance);map.current=instance;
     location.current=Leaflet.layerGroup().addTo(instance);
