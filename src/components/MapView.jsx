@@ -166,7 +166,7 @@ export function MapView({
   }, [navTarget, userCoords]);
 
   // Keep ref in sync so onLoad closure always has latest coords
-  userCoordsRef.current = userCoords;
+  useEffect(() => { userCoordsRef.current = userCoords; }, [userCoords]);
 
   // Fallback: center when coords arrive after map has already loaded
   useEffect(() => {

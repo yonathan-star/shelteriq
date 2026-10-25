@@ -1,0 +1,29 @@
+import { localStore as localStorage } from '../lib/storage.js';
+import { useEffect,useState } from "react";
+import { hub } from "../lib/serviceRepository.js";
+import { releaseCopy } from "../lib/releaseCopy.js";
+import { disasterSites,siteState } from "../data/disasterSites.js";
+import { appendPlanSteps } from "../lib/plans.js";
+import { CloudLightning,MapPinned,RefreshCw,ArrowUpRight } from 'lucide-react';
+import { FeatureHeader } from './FeatureHeader.jsx';
+export function DisasterCenter({language,onOpenMap}){
+  const L=releaseCopy(language);const [data,setData]=useState(()=>{try{return JSON.parse(localStorage.getItem("sq_alerts")||"null");}catch{return null;}}),[loading,setLoading]=useState(false),[error,setError]=useState(false),[now,setNow]=useState(()=>Date.now()),[onlyOpen,setOnlyOpen]=useState(false),[saved,setSaved]=useState(false);
+  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(timer);},[]);
+  async function refresh(){setLoading(true);try{const result=await hub("alerts");setData(result);setError(Boolean(result.error));localStorage.setItem("sq_alerts",JSON.stringify(result));}catch{setError(true);}finally{setLoading(false);}}
+  useEffect(()=>{let active=true;const update=()=>hub("alerts").then(result=>{if(active){setData(result);setError(Boolean(result.error));localStorage.setItem("sq_alerts",JSON.stringify(result));}}).catch(()=>{if(active)setError(true);});update();const timer=setInterval(update,60000);return()=>{active=false;clearInterval(timer);};},[]);
+  const stale=error||data?.stale||!data?.lastSuccessfulRefresh||now-Date.parse(data.lastSuccessfulRefresh)>120000;
+  const items=(data?.items||[]).filter(a=>!a.expires||Date.parse(a.expires)>now);
+  return <section className="release-panel disaster-panel"><FeatureHeader icon={CloudLightning} eyebrow="Broward County · NWS" title={L.disaster}><p>{language==='es'?'Información oficial para su próximo paso.':language==='ht'?'Enfòmasyon ofisyèl pou pwochen etap ou.':'Official information for your next step.'}</p></FeatureHeader>{onOpenMap&&<button className="disaster-map-entry" onClick={onOpenMap}><span className="map-entry-icon"><MapPinned size={26}/></span><span><strong>{language==='es'?'Ver el mapa de alertas':language==='ht'?'Gade kat alèt la':'Explore the alert map'}</strong><small>{language==='es'?'Florida · Panhandle · Tormentas':language==='ht'?'Florid · Panhandle · Tanpèt':'Florida · Panhandle · Storms'}</small></span><ArrowUpRight size={19}/></button>}<div className="section-bar"><h3>{L.alerts}</h3><button className="icon-refresh" aria-label={L.refresh} disabled={loading} onClick={refresh}><RefreshCw size={17} className={loading?'spin':''}/></button></div>
+    {error&&<p className="search-notice" role="alert">{L.failed}</p>}{stale&&data&&<p>{L.stale}</p>}
+    {!error&&!stale&&items.length===0&&<p>{L.noAlerts} {new Date(data.lastSuccessfulRefresh).toLocaleString()}</p>}
+    {data?.lastSuccessfulRefresh&&<p className="muted">{L.checked}: {new Date(data.lastSuccessfulRefresh).toLocaleString()}</p>}
+    {items.map(a=><article className="release-card" key={a.id}><p className="eyebrow">{a.severity} · {a.urgency} · {a.certainty}</p><h3>{a.headline||a.event}</h3><p>{a.area}</p><p className="muted">{a.effective} → {a.expires}</p><details><summary>{L.original}</summary><p className="official-text">{a.instruction||a.description}</p><p>{L.translations}</p></details><a href={a.sourceUrl} target="_blank" rel="noopener noreferrer">{L.source}</a></article>)}
+    <a href="https://alerts.weather.gov/" target="_blank" rel="noopener noreferrer">NWS · {L.source}</a>
+    <article className="release-card"><h3>{L.county}</h3><p>{L.stormStatus}</p><a href="https://www.broward.org/Hurricane" target="_blank" rel="noopener noreferrer">{L.county}</a></article>
+    <label className="check-label"><input type="checkbox" checked={onlyOpen} onChange={e=>setOnlyOpen(e.target.checked)}/>{language==="es"?"Solo refugios confirmados abiertos":language==="ht"?"Abri ki konfime ouvè sèlman":"Only shelters confirmed open"}</label>
+    {onlyOpen&&!disasterSites.some(s=>siteState(s,now)==="open")&&<p>{language==="es"?"No hay refugios confirmados abiertos en estos registros. Revise el sitio del condado.":language==="ht"?"Pa gen abri konfime ouvè nan dosye sa yo. Tcheke sit konte a.":"No shelters are confirmed open in these records. Check the county site for current information."}</p>}
+    {disasterSites.filter(s=>!onlyOpen||siteState(s,now)==="open").map(site=><article className="release-card" key={site.id}><h3>{site.name}</h3><p>{site.city} · {L[siteState(site,now)]}</p><p className="muted">{L.checked}: {new Date(site.verifiedAt).toLocaleString()}</p><p>{site.pets}</p><p>{language==="es"?"Confirme accesibilidad y registro con el condado.":language==="ht"?"Konfime aksè ak enskripsyon ak konte a.":"Confirm accessibility and registration requirements with the county."}</p><a href={site.sourceUrl} target="_blank" rel="noopener noreferrer">{L.source}</a></article>)}
+    <article className="release-card"><h3>{L.prepareLink}</h3><a href="https://www.broward.org/Hurricane" target="_blank" rel="noopener noreferrer">Broward Hurricane</a><br/><a href="https://www.broward.org/Emergency" target="_blank" rel="noopener noreferrer">Broward Emergency Management</a></article>
+    <button className="btn-submit" onClick={()=>{appendPlanSteps([{id:crypto.randomUUID(),serviceId:"county-hurricane",kind:"prepare",title:L.prepareLink,serviceName:"Broward Hurricane",sourceUrl:"https://www.broward.org/Hurricane",requirementSnapshot:L.stormStatus,serviceVersion:1,status:"pending"},{id:crypto.randomUUID(),serviceId:"county-transport",kind:"prepare",title:L.prepareLink,serviceName:"Broward Emergency Management",sourceUrl:"https://www.broward.org/Emergency",requirementSnapshot:L.prepareLink,serviceVersion:1,status:"pending"}],language);setSaved(true);}}>{saved?L.saved:L.save}</button>
+  </section>;
+}

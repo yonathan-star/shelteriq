@@ -8,8 +8,8 @@ const COPY = {
     confirm: "Great! Did you get in?",
     yes: "Yes, I got in",
     no: "No, it was full",
-    thanks: "Thank you for letting others know!",
-    thanksDesc: "Your check-in helps people coming after you.",
+    thanks: "Visit saved",
+    thanksDesc: "Saved only on this device. This does not confirm current availability.",
     reset: "Back",
   },
   es: {
@@ -17,8 +17,8 @@ const COPY = {
     confirm: "¡Bien! ¿Te dejaron entrar?",
     yes: "Sí, entré",
     no: "No, estaba lleno",
-    thanks: "¡Gracias por informar a otros!",
-    thanksDesc: "Tu reporte ayuda a quienes vienen después.",
+    thanks: "Visita guardada",
+    thanksDesc: "Guardado solo en este dispositivo. No confirma la disponibilidad actual.",
     reset: "Atrás",
   },
   ht: {
@@ -26,8 +26,8 @@ const COPY = {
     confirm: "Ou antre?",
     yes: "Wi, mwen antre",
     no: "Non, li te plen",
-    thanks: "Mèsi pou fè lòt moun konnen!",
-    thanksDesc: "Rapò ou ede moun ki vin apre ou.",
+    thanks: "Vizit la sove",
+    thanksDesc: "Sove sèlman sou aparèy sa a. Sa pa konfime disponiblite kounye a.",
     reset: "Retounen",
   },
 };

@@ -1,0 +1,6 @@
+.env*
+.data
+.superdesign
+shelteriq.diff
+scripts
+node_modules

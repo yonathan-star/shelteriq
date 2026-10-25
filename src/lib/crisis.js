@@ -34,8 +34,14 @@ const PATTERNS = {
 
 export function detectCrisis(text) {
   if (!text || text.trim().length < 5) return null;
+  const normalized=text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  if(/\b(?:cannot|can not|can't|cant) breathe\b|no puedo respirar|no respira|dolor (?:en el|de) pecho|mwen pa ka respire|li pa respire|doule nan pwatrin/.test(normalized))return 'medical_emergency';
+  if(/mwen vle touye tet mwen|mwen vle mouri|quiero morir|me quiero matar/.test(normalized)&&!/no quiero morir|mwen pa vle mouri/.test(normalized))return 'suicide';
+  if(/patne mwen ap bat|mari mwen ap bat|mennaj mwen ap bat|li ap bat mwen/.test(normalized))return 'domestic_violence';
+  // Remove only explicit denials, preserving any separate positive danger statement.
+  const screened=text.replace(/\b(?:i am|i'm|im) not suicidal\b|\bnot (?:suicidal|self.harming)\b|no (?:soy suicida|quiero suicidarme)|mwen pa anvi touye tet mwen/gi,'');
   for (const [type, patterns] of Object.entries(PATTERNS)) {
-    if (patterns.some(p => p.test(text))) return type;
+    if (patterns.some(p => p.test(screened))) return type;
   }
   return null;
 }

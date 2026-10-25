@@ -1,3 +1,6 @@
+import { uiCopy } from '../lib/uiCopy.js';
+import { detectCrisis } from '../lib/crisis.js';
+import { localStore as localStorage } from '../lib/storage.js';
 import { useState } from "react";
 import { House, Phone, Send, Loader, Map } from "lucide-react";
 import { ServiceCard, SkeletonCard } from "./ServiceCard";
@@ -5,16 +8,17 @@ import { MemoryBanner } from "./MemoryBanner";
 import { answerFollowUp } from "../lib/gemini";
 import { t } from "../lib/i18n";
 
-export function ResultsPanel({ results, onReset, language, loading = false, need, who, onSuggestNext, onViewMap, onNavigateService }) {
+export function ResultsPanel({ results, onReset, language, loading = false, need, who, onSuggestNext, onViewMap, onNavigateService, onCrisisDetected }) {
   const L = t(language);
   const [question, setQuestion] = useState("");
   const [qaHistory, setQaHistory] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("sq_qa") || "[]"); } catch { return []; }
+    try { const value=JSON.parse(localStorage.getItem("sq_qa") || "[]");return Array.isArray(value)?value.filter(x=>x&&["user","ai"].includes(x.role)&&typeof x.text==="string"):[]; } catch { return []; }
   });
   const [qaLoading, setQaLoading] = useState(false);
 
   const handleAsk = async () => {
     if (!question.trim() || qaLoading) return;
+    const crisis=detectCrisis(question);if(crisis&&onCrisisDetected){onCrisisDetected(crisis,question);return;}
     const q = question.trim();
     setQuestion("");
     setQaLoading(true);
@@ -68,7 +72,7 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
           {onViewMap && (
             <button onClick={onViewMap} className="btn-view-map">
               <Map size={14} />
-              <span>Map</span>
+              <span>{uiCopy(language).map}</span>
             </button>
           )}
           <button onClick={onReset} className="btn-reset">{L.startOver}</button>
@@ -80,7 +84,7 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
       <div className="results-list">
         {results.map((service, i) => (
           <ServiceCard
-            key={service.id}
+            key={`${service.id}:${language}`}
             service={service}
             rank={i + 1}
             need={need}
@@ -93,6 +97,7 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
 
       <div className="qa-section">
         <h3 className="qa-heading">{L.qaHeading}</h3>
+        {results.some(s=>s.verificationState!=='verified')&&<p className="muted">{uiCopy(language).unverified}</p>}
         {qaHistory.length > 0 && (
           <div className="qa-history">
             {qaHistory.map((msg, i) => (
@@ -109,13 +114,14 @@ export function ResultsPanel({ results, onReset, language, loading = false, need
         )}
         <div className="qa-input-row">
           <input
+            aria-label={L.qaHeading}
             className="qa-input"
             value={question}
             onChange={e => setQuestion(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleAsk()}
             placeholder={L.qaPlaceholder}
           />
-          <button className="qa-submit" onClick={handleAsk} disabled={qaLoading || !question.trim()}>
+          <button aria-label={language === "es" ? "Enviar pregunta" : language === "ht" ? "Voye kesyon" : "Send question"} className="qa-submit" onClick={handleAsk} disabled={qaLoading || !question.trim()}>
             {qaLoading ? <Loader size={16} className="spin" /> : <Send size={16} />}
           </button>
         </div>

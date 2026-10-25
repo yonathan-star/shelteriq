@@ -39,6 +39,8 @@ export function CrisisBanner({ crisisType, language = "en", onDismiss }) {
   const L = COPY[language] || COPY.en;
 
   if (!resource) return null;
+  const translated=language==='es'?{medical_emergency:{name:'Servicios de emergencia',description:'Llame para emergencias que amenazan la vida'},suicide:{name:'Línea de crisis 988',description:'Apoyo confidencial en crisis, disponible las 24 horas'},domestic_violence:{name:'Línea de violencia doméstica',description:'Ayuda confidencial para situaciones de violencia doméstica'}}:language==='ht'?{medical_emergency:{name:'Sèvis ijans',description:'Rele pou ijans ki menase lavi'},suicide:{name:'Liy kriz 988',description:'Sipò konfidansyèl nan kriz, disponib 24 sou 24'},domestic_violence:{name:'Liy vyolans domestik',description:'Èd konfidansyèl pou sitiyasyon vyolans domestik'}}:{};
+  const resourceText=translated[crisisType]||resource;
 
   return (
     <div className="crisis-banner">
@@ -47,7 +49,7 @@ export function CrisisBanner({ crisisType, language = "en", onDismiss }) {
         <p className="crisis-heading">{L.heading}</p>
       </div>
 
-      <p className="crisis-sub">{L.sub}</p>
+      <p className="crisis-sub">{crisisType==='medical_emergency'?(language==='es'?'En una emergencia que amenaza la vida, llame al 911.':language==='ht'?'Nan yon ijans ki menase lavi, rele 911.':'For a life-threatening emergency, call 911.'):L.sub}</p>
 
       <div className="crisis-cards">
         {/* Primary hotline for this crisis type */}
@@ -60,8 +62,8 @@ export function CrisisBanner({ crisisType, language = "en", onDismiss }) {
             <Phone size={16} />
           </div>
           <div className="crisis-card-text">
-            <p className="crisis-card-name">{resource.name}</p>
-            <p className="crisis-card-desc">{resource.description}</p>
+            <p className="crisis-card-name">{resourceText.name}</p>
+            <p className="crisis-card-desc">{resourceText.description}</p>
             <p className="crisis-card-phone">{resource.displayPhone}</p>
           </div>
           <ChevronRight size={16} className="crisis-card-arrow" />
@@ -73,8 +75,8 @@ export function CrisisBanner({ crisisType, language = "en", onDismiss }) {
             <Phone size={16} />
           </div>
           <div className="crisis-card-text">
-            <p className="crisis-card-name">211 — Broward Helpline</p>
-            <p className="crisis-card-desc">Shelter, food & mental health resources — free, 24/7</p>
+            <p className="crisis-card-name">{language==='es'?'211 — Línea de ayuda de Broward':language==='ht'?'211 — Liy èd Broward':'211 — Broward Helpline'}</p>
+            <p className="crisis-card-desc">{language==='es'?'Recursos de refugio, comida y salud mental':language==='ht'?'Resous abri, manje ak sante mantal':'Shelter, food & mental health resources'}</p>
             <p className="crisis-card-phone">2-1-1</p>
           </div>
           <ChevronRight size={16} className="crisis-card-arrow" />

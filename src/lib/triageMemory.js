@@ -37,6 +37,7 @@ export function getMemorySummary() {
   if (memory.attempts.length === 0) return null;
   return {
     attemptCount: memory.attempts.length,
+    lastQuery: memory.attempts.at(-1)?.query,
     alreadyShown: [...new Set(memory.attempts.flatMap(a => a.resultsShown))],
     rejected: memory.servicesRejected,
     contacted: memory.servicesContacted,

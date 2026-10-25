@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "map": {
+      "targetKind": "existing-ui",
+      "projectId": "e66edffe-358a-49ac-ae0c-9583f2d68331",
+      "baselineDraftId": "37650651-10eb-4c1c-9482-274dc38f5ff1",
+      "activeDraftId": "7ee30420-36d0-4b4e-998e-7dfdfa89b762",
+      "designSystemPath": ".superdesign/design-system.md",
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "src/App.jsx",
+        "src/components/HazardMap.jsx",
+        "src/components/FeatureHeader.jsx",
+        "src/components/PreventionIntake.jsx",
+        "src/components/ActionPlan.jsx",
+        "src/components/DisasterCenter.jsx",
+        "src/components/ServiceMap.jsx",
+        "src/styles/global.css:1:205",
+        "src/styles/global.css:2350:2404"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "1a1a1c9857b49bc1facf2037ccef00508c63dc5576382be15942feb62ebe3ca3",
+        "src/App.jsx": "99a33acbb7d87eca3baec23e60201d77631da77328be6ea37a55e83d70544514",
+        "src/components/HazardMap.jsx": "cd8e9138774e638965f900dcdab45855ec1703bb82ffb1606c1ae708b1e72790",
+        "src/components/FeatureHeader.jsx": "774c8f0c8630c6df152e3dd8d5d55692a7d445a2b5c3e87a3a35e3811789f8c7",
+        "src/components/PreventionIntake.jsx": "0bf4b3a89227e2bcfb5c6305a71b6cfd8d47ffbbd4f6d782f8a69b0d58c9f47f",
+        "src/components/ActionPlan.jsx": "f18a0aee9c3c1a6df0b06716ffec280e652f0b525335895548f431e9d7b9b41e",
+        "src/components/DisasterCenter.jsx": "764616286dd5aa247fdf003af7ab0a0d4904f33e142bffe00d28be98149877a9",
+        "src/components/ServiceMap.jsx": "829a9ce7e66ef8f4b0a91e5ff53474502c15dbfdcc50594554b941a9119d8b08",
+        "src/styles/global.css": "9d0965984e63108b4a37c0fbe4a9e953b575be1470d5ff3689b98756c82e9b5a"
+      },
+      "components": [
+        {
+          "name": "ShellHeader",
+          "id": "4ee16fe4-98d0-4d33-b994-a44b05a96095",
+          "sourcePath": "src/App.jsx"
+        }
+      ],
+      "drafts": {
+        "7ee30420-36d0-4b4e-998e-7dfdfa89b762": {
+          "title": "ShelterIQ Disaster Center - Mobile Preview",
+          "visualDirection": "Polished existing forest-green and cream mobile interface",
+          "parentDraftId": "37650651-10eb-4c1c-9482-274dc38f5ff1",
+          "currentVersion": 2
+        }
+      },
+      "approval": "approved",
+      "updatedAt": "2026-10-11T23:56:45.448Z",
+      "implemented": true
+    }
+  }
+}

@@ -1,3 +1,7 @@
+import { uiCopy,displayServiceReason,intakeConfirmation } from '../lib/uiCopy.js';
+import { CorrectionForm } from "./CorrectionForm.jsx";
+import { releaseCopy } from "../lib/releaseCopy.js";
+import { services as directory } from "../data/services.js";
 import { useState, useEffect } from "react";
 import { Clock, MapPin, Phone, Users, Loader, MessageSquare, Navigation } from "lucide-react";
 import { generateCallScript } from "../lib/gemini";
@@ -24,7 +28,11 @@ export function SkeletonCard() {
   );
 }
 
-export function ServiceCard({ service, rank, need, who, language = "en", onNavigate }) {
+export function ServiceCard({ service: result, rank, need, who, language = "en", onNavigate }) {
+  const service={...result,...directory.find(s=>s.id===result.id)};
+  service.reason=displayServiceReason(result,service,language);
+  const R=releaseCopy(language),U=uiCopy(language);
+  const [showCorrection,setShowCorrection]=useState(false);
   const [script, setScript] = useState(null);
   const [loadingScript, setLoadingScript] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -33,7 +41,7 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
   const [showCheckin, setShowCheckin] = useState(false);
   const L = t(language);
 
-  // Load availability status from crowdsourced check-ins
+  // Personal visit history, never live bed availability
   const checkinStatus = getCheckinStatus(service.id);
 
   useEffect(() => {
@@ -63,6 +71,7 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
       <div className="service-top">
         <span className={`rank-badge rank-${rank}`}>{rank}</span>
         <div style={{ flex: 1 }}>
+          {service.isDemo&&<strong className="eyebrow">Demo data</strong>}
           <h3 className="service-name">{service.name}</h3>
           {service.distance != null && (
             <p className="service-distance">{L.miles(service.distance)}</p>
@@ -70,15 +79,16 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
         </div>
         {checkinStatus && (
           <span className={`checkin-badge checkin-${checkinStatus.status}`}>
-            {checkinStatus.status === "available" ? L.checkinAvailable
-             : checkinStatus.status === "full" ? L.checkinFull
+            {checkinStatus.status === "available" ? (language === "es" ? "Su última visita: entró" : language === "ht" ? "Dènye vizit ou: ou antre" : L.checkinAvailable)
+             : checkinStatus.status === "full" ? (language === "es" ? "Su última visita: lleno" : language === "ht" ? "Dènye vizit ou: plen" : L.checkinFull)
              : L.checkinMixed}
           </span>
         )}
       </div>
 
+      {service.verificationState!=="verified"&&<p className="search-notice">{U.unverified}</p>}
       {service.reason && (
-        <p className="reason-box">{service.reason}</p>
+        <p className="reason-box">{service.verificationState!=="verified"&&<strong>{U.listed}: </strong>}{service.reason}</p>
       )}
 
       <div className="type-list">
@@ -94,16 +104,16 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
         <p className="meta-row"><Clock size={14} /><span>{service.hours}</span></p>
         <p className="meta-row">
           <Phone size={14} />
-          <span>{service.walkin ? L.walkin : L.callAhead}</span>
+          <span>{service.verificationState==='verified'||service.fieldVerification?.walkin?(service.walkin?L.walkin:L.callAhead):intakeConfirmation(language)}</span>
         </p>
-        {service.eligibility.pets && (
-          <p className="meta-row"><Users size={14} /><span>{L.pets}</span></p>
+        {service.eligibility.pets && (service.verificationState==='verified'||service.fieldVerification?.['eligibility.pets']) && (
+          <p className="meta-row"><Users size={14} /><span>{U.listed}: {L.pets}</span></p>
         )}
-        {service.eligibility.noId && (
-          <p className="meta-row"><Users size={14} /><span>{L.noId}</span></p>
+        {service.eligibility.noId && (service.verificationState==='verified'||service.fieldVerification?.['eligibility.noId']) && (
+          <p className="meta-row"><Users size={14} /><span>{U.listed}: {L.noId}</span></p>
         )}
-        {service.beds && (
-          <p className="meta-row"><Users size={14} /><span>{L.beds(service.beds)}</span></p>
+        {service.beds && (service.verificationState==='verified'||service.fieldVerification?.beds) && (
+          <p className="meta-row"><Users size={14} /><span>{U.capacity(service.beds)}</span></p>
         )}
       </div>
 
@@ -116,7 +126,7 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
 
       {checkinStatus && (
         <p className="checkin-meta">
-          {L.checkinReports(checkinStatus.attempts)} · {L.checkinUpdated(checkinStatus.lastUpdated)}
+          {language === "es" ? "Guardado en este dispositivo" : language === "ht" ? "Sove sou aparèy sa a" : L.checkinReports(checkinStatus.attempts)} · {L.checkinUpdated(checkinStatus.lastUpdated)}
         </p>
       )}
 
@@ -129,16 +139,15 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
           <Phone size={16} />
           <span>{L.callBtn(service.phone)}</span>
         </a>
-        {service.coords && onNavigate && (
-          <button
-            type="button"
-            className="btn-directions"
-            onClick={handleNavigate}
-          >
-            <Navigation size={15} />
-            <span>{language === "es" ? "Navegar" : language === "ht" ? "Direksyon" : "Navigate"}</span>
-          </button>
-        )}
+      {service.coords && onNavigate && (
+        <button
+          className="btn-directions"
+          onClick={handleNavigate}
+        >
+          <Navigation size={13} />
+          <span>{language === "es" ? "Navegar" : language === "ht" ? "Direksyon" : "Navigate"}</span>
+        </button>
+      )}
         {!script && (
           <button
             className="btn-script"
@@ -153,7 +162,9 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
         )}
       </div>
 
-      {/* "I'm Here" check-in */}
+
+      <div className="directory-proof"><p>{R[service.publicStatus] || R.unknown} · v{service.version || 1}</p><p>{service.verifiedAt ? `${R.checked}: ${service.verifiedAt.slice(0,10)}` : R.unverified}</p>{service.sourceUrl&&<a href={service.sourceUrl} target="_blank" rel="noopener noreferrer">{R.source}</a>}<p>{service.intakeRequirements}</p><button className="btn-reset" onClick={()=>setShowCorrection(v=>!v)}>{R.report}</button>{showCorrection&&<CorrectionForm service={service} language={language} onClose={()=>setShowCorrection(false)}/>}</div>
+      {/* Personal visit history */}
       {!showCheckin ? (
         <button
           className="btn-checkin"
@@ -177,13 +188,13 @@ export function ServiceCard({ service, rank, need, who, language = "en", onNavig
             className={`card-feedback-btn${rejected ? " rejected" : ""}`}
             onClick={() => { recordRejection(service.id); setRejected(true); }}
           >
-            {rejected ? "Marked as didn't work" : "Didn't work"}
+            {language==='es'?(rejected?'Marcado: no funcionó':'No funcionó'):language==='ht'?(rejected?'Make: pa mache':'Pa t mache'):(rejected?"Marked as didn't work":"Didn't work")}
           </button>
           <button
             className={`card-feedback-btn${contacted ? " contacted" : ""}`}
             onClick={() => { recordContact(service.id); setContacted(true); }}
           >
-            {contacted ? "Marked as called" : "Called"}
+            {language==='es'?(contacted?'Llamada marcada':'Llamé'):language==='ht'?(contacted?'Apèl make':'Mwen rele'):(contacted?'Marked as called':'Called')}
           </button>
         </div>
       )}

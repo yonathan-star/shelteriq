@@ -1,0 +1,53 @@
+ShelterIQ hosted release — October 11, 2026
+
+Shared backend
+Neon Postgres (free_v3 plan), linked to the existing Vercel ShelterIQ project.
+35 directory/program records migrated from the local database. Corrections,
+audit history, structured activity, reviewer sessions, and hazard-feed caches
+use shared persistent storage. Public access has no direct database credentials.
+Reviewed changes are transactional and reject stale versions.
+
+Active weather and disaster information
+NWS Florida alert types, NHC active tracks/cones/current positions, and USGS
+worldwide M4.5+ earthquakes from the past 7 days. The map refreshes every minute
+while open, and on return to the tab. Server weather/earthquake caches last
+30 seconds; NHC caches last 2 minutes. Alerts expire from the display and
+updates/cancellations retire old notices. Feed failures retain available cached
+information with a stale warning. Source refresh time is not the advisory issue
+time. Original issue/expiry information appears in alert details and storm pins.
+Storm tracks can disappear after NHC advisories end; this is not an all-clear.
+NOAA Isaias resources: https://www.noaa.gov/isaias
+A Panhandle map shortcut is included. Shelter/service pins do not establish
+open shelter activation or available beds. The legacy directory still needs
+provider verification before relying on its eligibility and intake details.
+
+Owner review
+Outreach > Review corrections. On the public site, use the private owner access
+code stored under SHELTERIQ_REVIEW_TOKEN in the ignored local .env.local file.
+Do not put it in GitHub, client code, or a public URL. Sessions expire after an
+hour; logout revokes the session in Postgres. This is one-owner access, not a
+provider account network. Local loopback owner access remains available.
+
+Private server configuration
+DATABASE_URL, GEMINI_API_KEY, GEMINI_MODEL, SHELTERIQ_REVIEW_TOKEN.
+Vercel holds the server configuration. The browser never receives these values.
+.env.cloud.local and .env.local are ignored by Git.
+
+Checks
+npm test (28 automated checks)
+npm run lint
+npm run build
+node --env-file=.env.cloud.local scripts/test-cloud.mjs
+The real-Postgres checks create a separate fictional test schema and remove it
+when finished. They do not submit fictional activity into the normal directory.
+
+Local setup
+Node 24, npm install, npm run dev -- --host 127.0.0.1
+An existing .env.local with DATABASE_URL uses the shared database. With no
+DATABASE_URL, local SQLite still works. Hosted deployment requires Postgres.
+Cloud migration is idempotent: node --env-file=.env.cloud.local scripts/migrate-cloud.mjs
+Use real backups before changing or deleting the shared database.
+
+Plans remain on the user's device. Calendar notifications are handled by their
+calendar app. Push, SMS/email, provider onboarding, remote multi-user reviewer
+accounts, and verified live bed counts are not part of this release.

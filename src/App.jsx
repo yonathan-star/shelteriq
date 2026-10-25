@@ -1,4 +1,15 @@
-import { useState } from "react";
+import { uiCopy } from './lib/uiCopy.js';
+import { PrivacyControls } from './components/PrivacyControls.jsx';
+import { validService } from './lib/storage.js';
+import { localStore as localStorage,sessionStore as sessionStorage } from './lib/storage.js';
+import { PreventionIntake } from "./components/PreventionIntake";
+import { ActionPlan } from "./components/ActionPlan";
+import { DisasterCenter } from "./components/DisasterCenter";
+import { ProviderReviewQueue } from "./components/ProviderReviewQueue";
+import { refreshServices, logRequest } from "./lib/serviceRepository";
+import { releaseCopy } from "./lib/releaseCopy";
+import { useEffect, useState } from "react";
+import { LocateFixed } from 'lucide-react';
 import { IntakeForm } from "./components/IntakeForm";
 import { ResultsPanel } from "./components/ResultsPanel";
 import { MapView } from "./components/MapView";
@@ -10,31 +21,25 @@ import { CrisisBanner } from "./components/CrisisBanner";
 import { filterServices, enrichResults } from "./lib/matching";
 import { runComplexIntake } from "./lib/gemini";
 import { recordAttempt, resetMemory, getMemorySummary } from "./lib/triageMemory";
-import { logSearch } from "./lib/searchIntelligence";
 import { useGeolocation } from "./hooks/useGeolocation";
 
 // Remove old ChatInterface session storage key — can cause Gemini history errors
 sessionStorage.removeItem("shelteriq_greeting");
 
 function loadSavedResults() {
-  try { return JSON.parse(localStorage.getItem("sq_results") || "null"); } catch { return null; }
-}
-
-function inferNeedFromSituation(text) {
-  const normalized = text.toLowerCase();
-  if (/food|meal|hungry|eat|pantry/.test(normalized)) return "food";
-  if (/mental|crisis|depress|anxiety|therapy|counsel/.test(normalized)) return "mental_health";
-  if (/substance|drug|alcohol|detox|addiction|recovery/.test(normalized)) return "substance_abuse";
-  if (/veteran|military|\bva\b/.test(normalized)) return "veteran";
-  if (/youth|teen|minor|under 21|young/.test(normalized)) return "youth";
-  if (/legal|lawyer|court|eviction/.test(normalized)) return "legal";
-  if (/medical|doctor|clinic|health|medicine/.test(normalized)) return "medical";
-  return "shelter";
+  try { const value=JSON.parse(localStorage.getItem("sq_results") || "null");return Array.isArray(value)&&value.every(validService)?value:null; } catch { return null; }
 }
 
 export default function App() {
   const [showHome, setShowHome] = useState(true);
-  const [language, setLanguage] = useState("en");
+  const [language, updateLanguage] = useState(()=>["en","es","ht"].includes(localStorage.getItem("sq_language"))?localStorage.getItem("sq_language"):"en");
+  const setLanguage=value=>{updateLanguage(value);localStorage.setItem("sq_language",value);};
+  const R=releaseCopy(language),U=uiCopy(language);
+  const [storageError,setStorageError]=useState(false);
+  useEffect(()=>{document.documentElement.lang=language;},[language]);
+  useEffect(()=>{const failed=()=>setStorageError(true);window.addEventListener("sq-storage-error",failed);return()=>window.removeEventListener("sq-storage-error",failed);},[]);
+  const [directoryVersion,setDirectoryVersion]=useState(0);
+  useEffect(()=>{let active=true;const refresh=()=>refreshServices().then(()=>{if(active)setDirectoryVersion(v=>v+1);});refresh();const timer=setInterval(refresh,60000);return()=>{active=false;clearInterval(timer);};},[]);
   const [view, setView] = useState(() => loadSavedResults() ? "results" : "intake");
   const [lastStandardView, setLastStandardView] = useState(() => loadSavedResults() ? "results" : "intake");
   const [results, setResults] = useState(() => loadSavedResults() || []);
@@ -43,25 +48,25 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem("sq_meta") || "{}"); } catch { return {}; }
   });
   const [loading, setLoading] = useState(false);
+  const [searchMessage, setSearchMessage] = useState("");
   const [crisis, setCrisis] = useState(null); // { type, situation }
-  const { coords, heading, speed, accuracy } = useGeolocation();
+  const [locationEnabled,setLocationEnabled]=useState(false);
+  const { coords, heading, speed, accuracy,error:locationError } = useGeolocation(locationEnabled);
 
   const setStandardView = (nextView) => {
     setLastStandardView(nextView);
     setView(nextView);
   };
 
-  const handleSimpleSubmit = (need, who, area) => {
-    const matched = filterServices(need, who, area, coords);
+  const handleSimpleSubmit = async (need, who, area) => {
+    await refreshServices();
+    setSearchMessage("");
+    const matched = filterServices(need, who, area, coords,undefined,language);
     const meta = { need, who, area };
+    logRequest(need,area,matched.length,language,matched.map(s=>s.id),who);
     setResults(matched);
     setIntakeMeta(meta);
     recordAttempt({ query: `${need} · ${who} · ${area}`, resultsShown: matched });
-    logSearch({
-      query: `${need} ${who} ${area}`,
-      resultsCount: matched.length,
-      serviceTypes: matched.flatMap(s => s.type),
-    });
     localStorage.setItem("sq_results", JSON.stringify(matched));
     localStorage.setItem("sq_meta", JSON.stringify(meta));
     localStorage.removeItem("sq_qa");
@@ -69,61 +74,50 @@ export default function App() {
   };
 
   const handleComplexSubmit = async (situation) => {
+    if (loading) return;
+    setSearchMessage("");
     setLoading(true);
     try {
+      await refreshServices();
       const response = await runComplexIntake(situation, language);
       if (response.type === "results") {
-        const matched = enrichResults(response.data.matches, response.data.reasons, coords);
-        recordAttempt({ query: situation.slice(0, 120), resultsShown: matched });
+        const matched = enrichResults(response.data.matches, response.data.reasons, coords,language);
+        setIntakeMeta({ complex: true, ...response.meta });
+        logRequest(response.meta?.need || "other",response.meta?.area || "unsure",matched.length,language,matched.map(s=>s.id));
+        setSearchMessage(response.notice || "");
+        recordAttempt({ query: situation, resultsShown: matched });
         setResults(matched);
-        logSearch({
-          query: situation.slice(0, 120),
-          resultsCount: matched.length,
-          serviceTypes: matched.flatMap(s => s.type),
-        });
         localStorage.setItem("sq_results", JSON.stringify(matched));
-        localStorage.setItem("sq_meta", JSON.stringify({ complex: true }));
+        localStorage.setItem("sq_meta", JSON.stringify({ complex: true, ...response.meta }));
         localStorage.removeItem("sq_qa");
         setStandardView("results");
-      }
+      } else { setSearchMessage(response.text); }
     } catch {
-      const fallbackNeed = inferNeedFromSituation(situation);
-      const matched = filterServices(fallbackNeed, "alone", "unsure", coords);
-      const meta = { complex: true, fallback: true, need: fallbackNeed };
-      recordAttempt({ query: situation.slice(0, 120), resultsShown: matched });
-      setResults(matched);
-      setIntakeMeta(meta);
-      logSearch({
-        query: situation.slice(0, 120),
-        resultsCount: matched.length,
-        serviceTypes: matched.flatMap(s => s.type),
-      });
-      localStorage.setItem("sq_results", JSON.stringify(matched));
-      localStorage.setItem("sq_meta", JSON.stringify(meta));
-      localStorage.removeItem("sq_qa");
-      setStandardView("results");
-    }
-    setLoading(false);
+      setSearchMessage(language === "es" ? "No se pudo buscar. Use el formulario rápido o inténtelo de nuevo." : language === "ht" ? "Rechèch la pa mache. Sèvi ak fòm rapid la oswa eseye ankò." : "Search could not finish. Use the quick form or try again.");
+    } finally { setLoading(false); }
   };
 
   const handleSuggestNext = async () => {
     const summary = getMemorySummary();
-    if (!summary) return;
+    if (!summary || loading) return;
     setLoading(true);
     try {
-      const situation = `I need help finding services. I have already been shown ${summary.alreadyShown.length} options that did not work for me. Please find me different options I have not been shown yet.`;
+      const situation = `${summary.lastQuery || "shelter"}. Please find different options.`;
       const response = await runComplexIntake(situation, language, summary);
       if (response.type === "results") {
-        const matched = enrichResults(response.data.matches, response.data.reasons, coords);
-        recordAttempt({ query: "suggest-next", resultsShown: matched });
+        const matched = enrichResults(response.data.matches, response.data.reasons, coords,language);
+        recordAttempt({ query: summary.lastQuery || "shelter", resultsShown: matched });
+        setSearchMessage(response.notice || "");
+        setIntakeMeta({ complex: true, ...response.meta });
         setResults(matched);
         localStorage.setItem("sq_results", JSON.stringify(matched));
-        localStorage.setItem("sq_meta", JSON.stringify({ complex: true }));
+        localStorage.setItem("sq_meta", JSON.stringify({ complex: true, ...response.meta }));
         localStorage.removeItem("sq_qa");
         setStandardView("results");
       }
+      else { setSearchMessage(response.text); }
     } catch {
-      // Silently fail
+      setSearchMessage("Search could not finish. Please try again.");
     }
     setLoading(false);
   };
@@ -146,6 +140,7 @@ export default function App() {
   const handleReset = () => {
     setResults([]);
     setIntakeMeta({});
+    setSearchMessage("");
     setCrisis(null);
     setNavTarget(null);
     resetMemory();
@@ -158,7 +153,11 @@ export default function App() {
   if (showHome) {
     return (
       <HomePage
-        onUserMode={() => setShowHome(false)}
+        language={language}
+        onPrevention={()=>{setShowHome(false);setStandardView("prevention");}}
+        onDisaster={()=>{setShowHome(false);setStandardView("disaster");}}
+        onPlan={()=>{setShowHome(false);setStandardView("plan");}}
+        onUserMode={() => { setShowHome(false); setStandardView("intake"); }}
         onOutreachMode={() => { setShowHome(false); setView("outreach"); }}
       />
     );
@@ -166,7 +165,8 @@ export default function App() {
 
   const isOutreach = view === "outreach";
 
-  const handleNavigateToService = (service) => {
+  const handleNavigateToService = (service, activeResults) => {
+    if(activeResults)setResults(activeResults);
     setNavTarget(service);
     setStandardView("map");
   };
@@ -175,7 +175,7 @@ export default function App() {
     <div className="app-shell">
       <header>
         <div>
-          <span className="logo">ShelterIQ</span>
+          <button className="logo logo-home" onClick={()=>setShowHome(true)} aria-label={R.home}>ShelterIQ</button>
         </div>
         <div className="header-actions">
           <LanguageToggle current={language} onChange={setLanguage} />
@@ -189,19 +189,23 @@ export default function App() {
             }}
             className="btn-mode"
           >
-            {isOutreach ? "User mode" : "Outreach"}
+            {isOutreach ? U.user : U.outreach}
           </button>
         </div>
       </header>
 
       <OfflineBanner language={language} />
+      {storageError&&<p className="search-notice" role="alert">{U.storageError}</p>}
 
       {!isOutreach && view !== "crisis" && (
         <div className="nav-tabs">
           {[
-            { id: "intake", label: "Intake" },
-            { id: "results", label: "Results" },
-            { id: "map", label: "Map" },
+            { id: "intake", label: U.intake },
+            { id: "results", label: U.results },
+            { id: "map", label: U.map },
+            { id: "prevention", label: language==="es"?"Vivienda":language==="ht"?"Lojman":"Housing" },
+            { id: "disaster", label: language==="es"?"Desastres":language==="ht"?"Dezas":"Disaster" },
+            { id: "plan", label: R.plan },
           ].map(tab => (
             <button
               key={tab.id}
@@ -214,7 +218,12 @@ export default function App() {
         </div>
       )}
 
-      <main className="app-main">
+      <main className="app-main" data-directory-version={directoryVersion}>
+        {view==="prevention"&&<div className="tab-content scroll-panel"><PreventionIntake language={language} onPlan={()=>setStandardView("plan")} onShelter={()=>setStandardView("intake")}/></div>}
+        {view==="plan"&&<div className="tab-content scroll-panel"><ActionPlan language={language} onPrevention={()=>setStandardView("prevention")}/></div>}
+        {view==="disaster"&&<div className="tab-content scroll-panel"><DisasterCenter language={language} onOpenMap={()=>{setNavTarget(null);setStandardView("map");}}/></div>}
+        {view==="review"&&<div className="tab-content scroll-panel"><ProviderReviewQueue language={language}/></div>}
+        {searchMessage && !isOutreach && view !== "crisis" && <p className="search-notice" role="status">{searchMessage}</p>}
         {view === "crisis" && crisis && (
           <div className="tab-content scroll-panel">
             <CrisisBanner
@@ -238,6 +247,8 @@ export default function App() {
         {view === "results" && (
           <div className="tab-content scroll-panel">
             <ResultsPanel
+              key={results.map(service => service.id).join(",")}
+              loading={loading}
               results={results}
               onReset={handleReset}
               language={language}
@@ -245,12 +256,14 @@ export default function App() {
               who={intakeMeta.who}
               onSuggestNext={handleSuggestNext}
               onViewMap={results.length > 0 ? () => setStandardView("map") : undefined}
-              onNavigateService={handleNavigateToService}
+              onNavigateService={handleNavigateToService} onCrisisDetected={handleCrisisDetected}
             />
           </div>
         )}
         {view === "map" && (
           <div className="tab-content map-panel">
+            {!locationEnabled&&<button className="map-location-prompt" aria-label={language==="es"?"Usar mi ubicación":language==="ht"?"Sèvi ak kote mwen ye":"Use my location"} title={language==="es"?"Usar mi ubicación":language==="ht"?"Sèvi ak kote mwen ye":"Use my location"} onClick={()=>setLocationEnabled(true)}><LocateFixed size={17}/></button>}
+            {locationEnabled&&locationError&&<p className="location-notice" role="status">{language==='es'?'Ubicación no disponible. Puede explorar el mapa.':language==='ht'?'Kote ou ye pa disponib. Ou ka eksplore kat la.':'Location unavailable. You can still explore the map.'}</p>}
             <MapView
               services={results.length > 0 ? results : []}
               userCoords={coords}
@@ -265,10 +278,12 @@ export default function App() {
         )}
         {view === "outreach" && (
           <div className="tab-content scroll-panel">
-            <OutreachMode language={language} onNavigateService={handleNavigateToService} />
+            <button className="review-entry" onClick={()=>setView("review")}>{R.review}</button>
+            <OutreachMode language={language} onNavigateService={handleNavigateToService} onCrisisDetected={handleCrisisDetected} />
           </div>
         )}
       </main>
+      <PrivacyControls language={language}/>
     </div>
   );
 }

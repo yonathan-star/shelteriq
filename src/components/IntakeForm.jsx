@@ -1,3 +1,4 @@
+import { localStore as localStorage } from '../lib/storage.js';
 import { useState } from "react";
 import { Search, ChevronDown, Loader } from "lucide-react";
 import { detectCrisis } from "../lib/crisis";
@@ -20,7 +21,7 @@ const LABELS = {
       { value: "mental_health", label: "Mental health support" },
       { value: "substance_abuse", label: "Substance abuse treatment" },
       { value: "veteran", label: "Veteran services" },
-      { value: "youth", label: "Youth services (under 21)" },
+      { value: "youth", label: "Youth services (confirm age requirements)" },
       { value: "other", label: "Other / not sure" },
     ],
     who: [
@@ -52,7 +53,7 @@ const LABELS = {
       { value: "mental_health", label: "Apoyo de salud mental" },
       { value: "substance_abuse", label: "Tratamiento de abuso de sustancias" },
       { value: "veteran", label: "Servicios para veteranos" },
-      { value: "youth", label: "Servicios para jóvenes (menores de 21)" },
+      { value: "youth", label: "Servicios para jóvenes (confirme la edad)" },
       { value: "other", label: "Otro / no estoy seguro" },
     ],
     who: [
@@ -84,7 +85,7 @@ const LABELS = {
       { value: "mental_health", label: "Sipò sante mantal" },
       { value: "substance_abuse", label: "Tretman pou drogue" },
       { value: "veteran", label: "Sèvis veteran" },
-      { value: "youth", label: "Sèvis pou jèn (mwens pase 21 an)" },
+      { value: "youth", label: "Sèvis pou jèn (konfime kondisyon laj)" },
       { value: "other", label: "Lòt / mwen pa konnen" },
     ],
     who: [
@@ -126,9 +127,10 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading,
       {!complex ? (
         <>
           <div className="form-group">
-            <label className="form-label">{L.need}</label>
+            <label className="form-label" htmlFor="intake-need">{L.need}</label>
             <div className="select-wrap">
               <select
+                id="intake-need"
                 className="form-select"
                 value={need}
                 onChange={e => setNeed(e.target.value)}
@@ -143,9 +145,10 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading,
           </div>
 
           <div className="form-group">
-            <label className="form-label">{L.whoLabel || L.who}</label>
+            <label className="form-label" htmlFor="intake-who">{L.whoLabel}</label>
             <div className="select-wrap">
               <select
+                id="intake-who"
                 className="form-select"
                 value={who}
                 onChange={e => setWho(e.target.value)}
@@ -159,9 +162,10 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading,
           </div>
 
           <div className="form-group">
-            <label className="form-label">{L.area}</label>
+            <label className="form-label" htmlFor="intake-area">{L.area}</label>
             <div className="select-wrap">
               <select
+                id="intake-area"
                 className="form-select"
                 value={area}
                 onChange={e => setArea(e.target.value)}
@@ -193,8 +197,9 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading,
       ) : (
         <>
           <div className="form-group">
-            <label className="form-label">{L.complexLabel}</label>
+            <label className="form-label" htmlFor="intake-situation">{L.complexLabel}</label>
             <textarea
+              id="intake-situation"
               className="form-textarea"
               rows={5}
               placeholder={L.complexPlaceholder}
@@ -223,7 +228,7 @@ export function IntakeForm({ language, onSimpleSubmit, onComplexSubmit, loading,
             className="btn-complex-toggle"
             onClick={() => setComplex(false)}
           >
-            ← Back to quick form
+            {language === "es" ? "← Volver al formulario rápido" : language === "ht" ? "← Retounen nan fòm rapid la" : "← Back to quick form"}
           </button>
         </>
       )}
